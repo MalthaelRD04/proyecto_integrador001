@@ -1,0 +1,180 @@
+{
+  "version": "1.0.0",
+  "darkMode": true,
+  "gridEnabling": false,
+  "detailLevel": "All",
+  "tablePositions": [
+    {
+      "name": "usuarios",
+      "schemaName": "public",
+      "x": -576.3643053774597,
+      "y": 298.492395132797
+    },
+    {
+      "name": "categorias",
+      "schemaName": "public",
+      "x": 208.95783532368534,
+      "y": 36.19486693706682
+    },
+    {
+      "name": "items",
+      "schemaName": "public",
+      "x": 578.46044921875,
+      "y": 12
+    },
+    {
+      "name": "clientes",
+      "schemaName": "public",
+      "x": -229.51033717126387,
+      "y": 126.48966282873613
+    },
+    {
+      "name": "facturas",
+      "schemaName": "public",
+      "x": -79.86258467853918,
+      "y": 352.26918193243523
+    },
+    {
+      "name": "detalle_factura",
+      "schemaName": "public",
+      "x": -72.47694858039915,
+      "y": 909.4794440664682
+    },
+    {
+      "name": "trabajos",
+      "schemaName": "public",
+      "x": -543.6443250194347,
+      "y": 727.5253992392396
+    },
+    {
+      "name": "abonos_trabajo",
+      "schemaName": "public",
+      "x": 683.71905292618,
+      "y": 693.7041263184584
+    }
+  ],
+  "tableGroupCollapseStates": [],
+  "stickyNoteLayouts": [],
+  "referencePaths": [
+    {
+      "firstFieldNames": [
+        "categoria_id"
+      ],
+      "firstTableName": "items",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "categorias",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "cliente_id"
+      ],
+      "firstTableName": "facturas",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "clientes",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "usuario_id"
+      ],
+      "firstTableName": "facturas",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "usuarios",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "factura_id"
+      ],
+      "firstTableName": "detalle_factura",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "facturas",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "item_id"
+      ],
+      "firstTableName": "detalle_factura",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "items",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "cliente_id"
+      ],
+      "firstTableName": "trabajos",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "clientes",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "usuario_id"
+      ],
+      "firstTableName": "trabajos",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "usuarios",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    },
+    {
+      "firstFieldNames": [
+        "trabajo_id"
+      ],
+      "firstTableName": "abonos_trabajo",
+      "firstSchemaName": "public",
+      "firstRelation": "*",
+      "secondFieldNames": [
+        "id"
+      ],
+      "secondTableName": "trabajos",
+      "secondSchemaName": "public",
+      "secondRelation": "1",
+      "checkPoints": []
+    }
+  ]
+}

@@ -1,0 +1,193 @@
+// =============================================
+// BASE DE DATOS - JRJ Centro de Copias y Servicios
+// San Fernando de Monte Cristi, Rep. Dominicana
+// Formato: DBML (dbdiagram.io)
+// =============================================
+
+Project JRJ_Sistema {
+  database_type: 'PostgreSQL'
+  Note: 'Base de datos para el sistema de inventario y facturación de JRJ'
+}
+
+// ======================
+// PASO 1 - MÓDULO: LOGIN / SEGURIDAD
+// ======================
+// ¿Por qué esta tabla?
+// El requerimiento exige un sistema de login seguro con usuario y contraseña.
+// Aunque hoy solo opera el dueño, se diseña con campo "rol" para escalar
+// a múltiples empleados en el futuro.
+// La contraseña se guarda como hash (encriptada), NUNCA en texto plano.
+
+Table usuarios {
+  id int [pk, increment, note: 'Identificador único del usuario']
+  nombre varchar(100) [not null, note: 'Nombre completo para mostrar']
+  usuario varchar(50) [unique, not null, note: 'Nombre de usuario para login']
+  contrasena_hash varchar(255) [not null, note: 'Contraseña encriptada (hash)']
+  rol varchar(20) [default: 'admin', note: 'Rol: admin o empleado']
+  activo boolean [default: true, note: 'Permite desactivar sin borrar']
+  creado_en timestamp [default: `now()`, note: 'Fecha de creación del registro']
+
+  Note: 'Tabla de usuarios del sistema. Controla el acceso (login) y registra quién realiza cada operación.'
+}
+
+// ======================
+// PASO 2 - MÓDULO: CATALOGO (Categorías)
+// ======================
+// ¿Por qué esta tabla?
+// Permite AGRUPAR los productos para búsquedas rápidas, organización y reportes.
+// Ejemplo: "Útiles Escolares", "Consumibles de Impresora".
+// Los servicios (como copias) podrían no tener categoría o podrían tener una genérica.
+
+Table categorias {
+  id int [pk, increment, note: 'Identificador único de la categoría']
+  nombre varchar(100) [unique, not null, note: 'Nombre de la categoría (ej: Útiles Escolares)']
+  descripcion text [note: 'Descripción opcional de la categoría']
+
+  Note: 'Agrupa los productos por tipo para organización y búsqueda rápida.'
+}
+
+// ======================
+// PASO 3 - MÓDULO: CATALOGO UNIFICADO (Items)
+// ======================
+// ¿Por qué esta tabla?
+// Antes teníamos "Productos" y "Servicios" separados. Ahora se UNIFICAN en "Items".
+// Esto simplifica la facturación y el mantenimiento.
+// - `tipo`: Define si es 'producto' (controla stock) o 'servicio' (intangible).
+// - `stock`: Solo aplica si es PRODUCTO.
+
+Table items {
+  id int [pk, increment, note: 'Identificador único del ítem']
+  es_producto boolean [not null, default: true, note: 'TRUE = Producto (controla stock), FALSE = Servicio (intangible)']
+  nombre varchar(150) [not null, note: 'Nombre del producto o servicio']
+  descripcion text [note: 'Detalle adicional']
+  precio_venta decimal(10,2) [not null, note: 'Precio de venta público']
+  costo decimal(10,2) [default: 0, note: 'Costo de adquisición (útil para productos)']
+  stock int [default: 0, note: 'Cantidad disponible. Ignorar si es servicio (false).']
+  stock_minimo int [default: 5, note: 'Alerta de reabastecimiento. Ignorar si es servicio (false).']
+  categoria_id int [note: 'FK -> categorias.id. Puede ser null para servicios.']
+  activo boolean [default: true, note: 'Si el ítem se muestra en el sistema']
+  creado_en timestamp [default: `now()`, note: 'Fecha de registro']
+  actualizado_en timestamp [default: `now()`, note: 'Última modificación']
+
+  Note: 'Catálogo unificado. Contiene tanto PRODUCTOS (con stock) como SERVICIOS (solo precio).'
+}
+
+// ======================
+// PASO 5 - MÓDULO: FACTURACIÓN (Clientes)
+// ======================
+// ¿Por qué esta tabla?
+// Para trabajos manuales y facturación con cliente identificado.
+
+Table clientes {
+  id int [pk, increment, note: 'Identificador único del cliente']
+  nombre varchar(150) [not null, note: 'Nombre completo del cliente']
+  telefono varchar(20) [note: 'Teléfono para contactar (avisar trabajos listos)']
+  direccion text [note: 'Dirección del cliente (opcional)']
+  creado_en timestamp [default: `now()`, note: 'Fecha de registro']
+
+  Note: 'Registro de clientes. Obligatorio en trabajos manuales, opcional en ventas de mostrador.'
+}
+
+// ======================
+// PASO 6 - MÓDULO: FACTURACIÓN (Cabecera)
+// ======================
+// ¿Por qué esta tabla?
+// Cabecera de la factura. Registra el total, fecha y cliente.
+
+Table facturas {
+  id int [pk, increment, note: 'Identificador único de la factura']
+  numero_factura varchar(20) [unique, not null, note: 'Número secuencial legible (ej: FAC-0001)']
+  cliente_id int [note: 'FK → clientes.id - OPCIONAL (ventas anónimas de mostrador)']
+  usuario_id int [not null, note: 'FK → usuarios.id - Quién emitió la factura']
+  subtotal decimal(10,2) [not null, note: 'Suma antes de impuestos']
+  impuesto decimal(10,2) [default: 0, note: 'ITBIS u otro impuesto (0 si no aplica)']
+  total decimal(10,2) [not null, note: 'Monto total a pagar']
+  metodo_pago varchar(20) [default: 'efectivo', note: 'efectivo, tarjeta, transferencia']
+  estado varchar(20) [default: 'pagada', note: 'pagada, pendiente, anulada']
+  nota text [note: 'Observaciones opcionales']
+  fecha timestamp [default: `now()`, note: 'Fecha y hora de la transacción']
+
+  Note: 'Cabecera de cada venta. Contiene totales, método de pago y estado. Los ítems van en detalle_factura.'
+}
+
+// ======================
+// PASO 7 - MÓDULO: FACTURACIÓN (Detalle)
+// ======================
+// ¿Por qué esta tabla?
+// Detalle de los ítems vendidos en la factura.
+// AHORA SIMPLIFICADA: Solo referencia a la tabla `items`.
+
+Table detalle_factura {
+  id int [pk, increment, note: 'Identificador único del detalle']
+  factura_id int [not null, note: 'FK → facturas.id - A qué factura pertenece']
+  item_id int [not null, note: 'FK → items.id - Producto o Servicio vendido']
+  descripcion varchar(255) [not null, note: 'Se copia nombre del ítem (histórico)']
+  cantidad int [not null, note: 'Unidades vendidas']
+  precio_unitario decimal(10,2) [not null, note: 'Precio real de venta']
+  subtotal decimal(10,2) [not null, note: 'cantidad x precio_unitario']
+
+  Note: 'Líneas de la factura. Referencia unificada a la tabla items.'
+}
+
+// ======================
+// PASO 8 - MÓDULO: REGISTRO DE TRABAJOS (parte 1)
+// ======================
+// ¿Por qué esta tabla?
+// El "notario" para trabajos manuales (decoración, etc).
+
+Table trabajos {
+  id int [pk, increment, note: 'Identificador único del trabajo']
+  cliente_id int [not null, note: 'FK → clientes.id - Quién encargó el trabajo']
+  usuario_id int [not null, note: 'FK → usuarios.id - Quién registró el trabajo']
+  descripcion text [not null, note: 'Qué se debe hacer (detalle del trabajo)']
+  precio_total decimal(10,2) [not null, note: 'Precio total acordado con el cliente']
+  tiene_descuento boolean [default: false, note: '¿Se aplica descuento? (Sí/No)']
+  monto_descuento decimal(10,2) [default: 0, note: 'Monto del descuento aplicado']
+  total_abonado decimal(10,2) [default: 0, note: 'Suma de todos los abonos realizados']
+  saldo_pendiente decimal(10,2) [not null, note: 'Lo que falta por pagar (precio_total - monto_descuento - total_abonado)']
+  estado varchar(20) [default: 'pendiente', note: 'pendiente, en_proceso, entregado, cancelado']
+  fecha_recibido timestamp [default: `now()`, note: 'Cuándo se recibió el pedido']
+  fecha_entrega_estimada date [note: 'Fecha prometida de entrega']
+  fecha_entrega_real timestamp [note: 'Cuándo se entregó realmente (se llena al entregar)']
+  nota text [note: 'Observaciones adicionales']
+
+  Note: 'El NOTARIO del negocio: registro de trabajos manuales de decoración y proyectos con seguimiento de estado, fechas y pagos.'
+}
+
+// ======================
+// PASO 9 - MÓDULO: REGISTRO DE TRABAJOS (parte 2)
+// ======================
+// ¿Por qué esta tabla?
+// Pagos parciales (abonos) para los trabajos.
+
+Table abonos_trabajo {
+  id int [pk, increment, note: 'Identificador único del abono']
+  trabajo_id int [not null, note: 'FK → trabajos.id - A qué trabajo corresponde']
+  monto decimal(10,2) [not null, note: 'Monto abonado en este pago']
+  metodo_pago varchar(20) [default: 'efectivo', note: 'efectivo, tarjeta, transferencia']
+  nota text [note: 'Comentario opcional sobre el abono']
+  fecha timestamp [default: `now()`, note: 'Fecha y hora del abono']
+
+  Note: 'Pagos parciales (abonos) de los trabajos manuales. Permite rastrear historial de pagos.'
+}
+
+// ======================
+// RELACIONES (Foreign Keys)
+// ======================
+
+// Módulo Inventario
+Ref: items.categoria_id > categorias.id
+
+// Módulo Facturación
+Ref: facturas.cliente_id > clientes.id
+Ref: facturas.usuario_id > usuarios.id
+
+Ref: detalle_factura.factura_id > facturas.id
+Ref: detalle_factura.item_id > items.id
+
+// Módulo Registro de Trabajos
+Ref: trabajos.cliente_id > clientes.id
+Ref: trabajos.usuario_id > usuarios.id
+
+Ref: abonos_trabajo.trabajo_id > trabajos.id
+
