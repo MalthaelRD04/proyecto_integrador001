@@ -1,10 +1,22 @@
-import { useParams, Link } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import { getById, getAll, formatMoney, formatDateTime } from '../data/store';
 import { ArrowLeft, Printer } from 'lucide-react';
 
 export default function FacturaDetalle() {
     const { id } = useParams();
+    const location = useLocation();
+    const navigate = useNavigate();
     const factura = getById('facturas', id);
+
+    useEffect(() => {
+        if (location.state?.autoPrint) {
+            navigate(location.pathname, { replace: true, state: {} });
+            setTimeout(() => {
+                window.print();
+            }, 300);
+        }
+    }, [location, navigate]);
 
     if (!factura) {
         return (

@@ -124,9 +124,8 @@ export default function Facturacion() {
         setItems(getAll('items').filter(i => i.activo));
         setFacturaNum(getNextFacturaNum());
 
-        setTimeout(() => {
-            navigate(`/facturas/${factura.id}`);
-        }, 1500);
+        // Redirect immediately and pass the autoPrint flag
+        navigate(`/facturas/${factura.id}`, { state: { autoPrint: true } });
     };
 
     return (
