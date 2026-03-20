@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getById, getAll, update, registrarAbono, formatMoney, formatDate, formatDateTime } from '../data/store';
 import Modal from '../components/Modal';
-import { ArrowLeft, Plus, DollarSign, Calendar, User, AlertCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Plus, DollarSign, Calendar, User, AlertCircle, CheckCircle, Printer, MessageCircle } from 'lucide-react';
 
 export default function TrabajoDetalle() {
     const { id } = useParams();
@@ -28,6 +28,167 @@ export default function TrabajoDetalle() {
 
     const cliente = getById('clientes', trabajo.cliente_id);
     const usuario = getById('usuarios', trabajo.usuario_id);
+
+    const generateInvoiceText = (t, cli, abonosList) => {
+        const neto = Number(t.precio_total) - Number(t.monto_descuento);
+        let text = `📋 *FACTURA DE TRABAJO MANUAL*\n`;
+        text += `━━━━━━━━━━━━━━━━━━━━\n`;
+        text += `🏢 *JRJ Centro de Copias y Servicios*\n`;
+        text += `📍 San Fernando de Monte Cristi, R.D.\n`;
+        text += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+        text += `👤 *Cliente:* ${cli?.nombre || 'Sin cliente'}\n`;
+        if (cli?.telefono) text += `📞 *Teléfono:* ${cli.telefono}\n`;
+        if (cli?.direccion) text += `📍 *Dirección:* ${cli.direccion}\n`;
+        text += `\n📝 *Descripción:*\n${t.descripcion}\n\n`;
+        text += `📅 *Fecha Recibido:* ${formatDate(t.fecha_recibido)}\n`;
+        text += `📅 *Entrega Estimada:* ${formatDate(t.fecha_entrega_estimada)}\n`;
+        if (t.fecha_entrega_real) text += `✅ *Entrega Real:* ${formatDate(t.fecha_entrega_real)}\n`;
+        text += `\n━━━━━━━━━━━━━━━━━━━━\n`;
+        text += `💰 *RESUMEN FINANCIERO*\n`;
+        text += `━━━━━━━━━━━━━━━━━━━━\n`;
+        text += `   Precio Total:  RD$ ${formatMoney(t.precio_total)}\n`;
+        if (t.tiene_descuento) text += `   Descuento:    -RD$ ${formatMoney(t.monto_descuento)}\n`;
+        text += `   Total Abonado:  RD$ ${formatMoney(t.total_abonado)}\n`;
+        text += `   *Saldo Pendiente: RD$ ${formatMoney(t.saldo_pendiente)}*\n\n`;
+        if (abonosList.length > 0) {
+            text += `📜 *HISTORIAL DE ABONOS*\n`;
+            text += `━━━━━━━━━━━━━━━━━━━━\n`;
+            abonosList.forEach((a, i) => {
+                text += `${i + 1}. RD$ ${formatMoney(a.monto)} - ${a.metodo_pago} (${formatDate(a.fecha)})\n`;
+            });
+        }
+        text += `\n✨ _Gracias por su preferencia_`;
+        return text;
+    };
+
+    const handlePrint = () => {
+        const t = getById('trabajos', id);
+        const cli = getById('clientes', t.cliente_id);
+        const usr = getById('usuarios', t.usuario_id);
+        const abonosList = getAll('abonos_trabajo').filter(a => a.trabajo_id === Number(id));
+        const neto = Number(t.precio_total) - Number(t.monto_descuento);
+
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Factura Trabajo #${t.id}</title>
+                <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; color: #1a1a2e; }
+                    .header { text-align: center; margin-bottom: 24px; border-bottom: 2px solid #1a1a2e; padding-bottom: 16px; }
+                    .header h1 { font-size: 20px; margin-bottom: 4px; }
+                    .header p { font-size: 12px; color: #666; }
+                    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+                    .info-block h4 { font-size: 11px; text-transform: uppercase; color: #888; margin-bottom: 4px; }
+                    .info-block p { font-size: 13px; margin-bottom: 2px; }
+                    .description { background: #f5f5f5; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; }
+                    .description label { font-size: 11px; text-transform: uppercase; color: #888; display: block; margin-bottom: 4px; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; }
+                    th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #eee; }
+                    th { background: #f0f0f0; font-size: 11px; text-transform: uppercase; color: #666; }
+                    .text-right { text-align: right; }
+                    .totals { margin-left: auto; width: 280px; }
+                    .totals tr td { padding: 6px 12px; }
+                    .totals .total-row { font-size: 16px; font-weight: 700; border-top: 2px solid #1a1a2e; }
+                    .footer { text-align: center; margin-top: 30px; font-size: 11px; color: #999; border-top: 1px solid #ddd; padding-top: 12px; }
+                    .estado { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+                    .estado-pendiente { background: #fff3cd; color: #856404; }
+                    .estado-en_proceso { background: #cce5ff; color: #004085; }
+                    .estado-entregado { background: #d4edda; color: #155724; }
+                    .estado-cancelado { background: #f8d7da; color: #721c24; }
+                    @media print { body { padding: 15px; } }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>JRJ Centro de Copias y Servicios</h1>
+                    <p>San Fernando de Monte Cristi, R.D.</p>
+                    <p style="margin-top:8px; font-size:14px; font-weight:600;">FACTURA DE TRABAJO MANUAL #${t.id}</p>
+                </div>
+                <div class="info-grid">
+                    <div class="info-block">
+                        <h4>Cliente</h4>
+                        <p style="font-weight:600">${cli?.nombre || 'Sin cliente'}</p>
+                        ${cli?.telefono ? `<p>${cli.telefono}</p>` : ''}
+                        ${cli?.direccion ? `<p>${cli.direccion}</p>` : ''}
+                    </div>
+                    <div class="info-block">
+                        <h4>Información del Trabajo</h4>
+                        <p>Registrado por: ${usr?.nombre || '—'}</p>
+                        <p>Estado: <span class="estado estado-${t.estado}">${t.estado.replace('_', ' ')}</span></p>
+                    </div>
+                </div>
+                <div class="info-grid">
+                    <div class="info-block">
+                        <h4>Fecha Recibido</h4>
+                        <p>${formatDate(t.fecha_recibido)}</p>
+                    </div>
+                    <div class="info-block">
+                        <h4>Entrega Estimada</h4>
+                        <p>${formatDate(t.fecha_entrega_estimada)}</p>
+                    </div>
+                </div>
+                <div class="description">
+                    <label>Descripción del Trabajo</label>
+                    ${t.descripcion}
+                </div>
+                ${abonosList.length > 0 ? `
+                    <h4 style="font-size:12px; margin-bottom:8px; color:#666; text-transform:uppercase;">Historial de Abonos</h4>
+                    <table>
+                        <thead><tr><th>Fecha</th><th>Método</th><th class="text-right">Monto</th><th>Nota</th></tr></thead>
+                        <tbody>
+                            ${abonosList.map(a => `
+                                <tr>
+                                    <td>${formatDateTime(a.fecha)}</td>
+                                    <td style="text-transform:capitalize">${a.metodo_pago}</td>
+                                    <td class="text-right" style="font-weight:600; color:#16a34a;">+RD$ ${formatMoney(a.monto)}</td>
+                                    <td>${a.nota || '—'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                ` : ''}
+                <div class="totals">
+                    <table>
+                        <tbody>
+                            <tr><td>Precio Total</td><td class="text-right">RD$ ${formatMoney(t.precio_total)}</td></tr>
+                            ${t.tiene_descuento ? `<tr><td style="color:#16a34a">Descuento</td><td class="text-right" style="color:#16a34a">-RD$ ${formatMoney(t.monto_descuento)}</td></tr>` : ''}
+                            <tr><td>Total Abonado</td><td class="text-right" style="color:#16a34a">RD$ ${formatMoney(t.total_abonado)}</td></tr>
+                            <tr class="total-row">
+                                <td>Saldo Pendiente</td>
+                                <td class="text-right" style="color:${t.saldo_pendiente > 0 ? '#dc2626' : '#16a34a'}">
+                                    RD$ ${formatMoney(t.saldo_pendiente)}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="footer">
+                    <p>Gracias por su preferencia</p>
+                    <p>JRJ Centro de Copias y Servicios</p>
+                </div>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+        setTimeout(() => { printWindow.print(); }, 300);
+    };
+
+    const handleWhatsApp = () => {
+        const t = getById('trabajos', id);
+        const cli = getById('clientes', t.cliente_id);
+        const abonosList = getAll('abonos_trabajo').filter(a => a.trabajo_id === Number(id));
+        const text = generateInvoiceText(t, cli, abonosList);
+        let phone = cli?.telefono?.replace(/[^0-9]/g, '') || '';
+        if (phone && !phone.startsWith('1') && !phone.startsWith('52')) {
+            phone = '1' + phone;
+        }
+        const url = phone
+            ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
+            : `https://wa.me/?text=${encodeURIComponent(text)}`;
+        window.open(url, '_blank');
+    };
 
     const estadoBadge = (estado) => {
         const map = { pendiente: 'badge-amber', en_proceso: 'badge-blue', entregado: 'badge-green', cancelado: 'badge-red' };
@@ -226,15 +387,33 @@ export default function TrabajoDetalle() {
                                 <div style={{ height: 8, background: 'var(--slate-100)', borderRadius: 4, overflow: 'hidden' }}>
                                     <div style={{
                                         height: '100%',
-                                        width: `${Math.min(100, (currentTrabajo.total_abonado / (currentTrabajo.precio_total - currentTrabajo.monto_descuento)) * 100)}%`,
+                                        width: `${(currentTrabajo.precio_total - currentTrabajo.monto_descuento) > 0 ? Math.min(100, (currentTrabajo.total_abonado / (currentTrabajo.precio_total - currentTrabajo.monto_descuento)) * 100) : 0}%`,
                                         background: currentTrabajo.saldo_pendiente <= 0 ? 'var(--color-success)' : 'var(--color-primary)',
                                         borderRadius: 4,
                                         transition: 'width var(--transition-slow)',
                                     }} />
                                 </div>
                                 <div className="text-small" style={{ marginTop: 4, textAlign: 'right' }}>
-                                    {Math.min(100, Math.round((currentTrabajo.total_abonado / (currentTrabajo.precio_total - currentTrabajo.monto_descuento)) * 100))}%
+                                    {(currentTrabajo.precio_total - currentTrabajo.monto_descuento) > 0 ? Math.min(100, Math.round((currentTrabajo.total_abonado / (currentTrabajo.precio_total - currentTrabajo.monto_descuento)) * 100)) : 0}%
                                 </div>
+                            </div>
+
+                            {/* Botones de Factura */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginTop: 'var(--space-5)' }}>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={handlePrint}
+                                    style={{ width: '100%', justifyContent: 'center' }}
+                                >
+                                    <Printer size={16} /> Imprimir Factura
+                                </button>
+                                <button
+                                    className="btn btn-success"
+                                    onClick={handleWhatsApp}
+                                    style={{ width: '100%', justifyContent: 'center' }}
+                                >
+                                    <MessageCircle size={16} /> Enviar por WhatsApp
+                                </button>
                             </div>
                         </div>
                     </div>
