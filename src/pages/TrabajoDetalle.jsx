@@ -11,6 +11,7 @@ export default function TrabajoDetalle() {
     const [abonoForm, setAbonoForm] = useState({ monto: '', metodo_pago: 'efectivo', nota: '' });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [modalPrint, setModalPrint] = useState(false);
 
     const trabajo = getById('trabajos', id);
     const abonos = getAll('abonos_trabajo').filter(a => a.trabajo_id === Number(id));
@@ -61,7 +62,8 @@ export default function TrabajoDetalle() {
         return text;
     };
 
-    const handlePrint = () => {
+    const handlePrint = (formato) => {
+        setModalPrint(false);
         const t = getById('trabajos', id);
         const cli = getById('clientes', t.cliente_id);
         const usr = getById('usuarios', t.usuario_id);
@@ -69,108 +71,179 @@ export default function TrabajoDetalle() {
         const neto = Number(t.precio_total) - Number(t.monto_descuento);
 
         const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
-            <html>
-            <head>
-                <title>Factura Trabajo #${t.id}</title>
-                <style>
-                    * { margin: 0; padding: 0; box-sizing: border-box; }
-                    body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; color: #1a1a2e; }
-                    .header { text-align: center; margin-bottom: 24px; border-bottom: 2px solid #1a1a2e; padding-bottom: 16px; }
-                    .header h1 { font-size: 20px; margin-bottom: 4px; }
-                    .header p { font-size: 12px; color: #666; }
-                    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-                    .info-block h4 { font-size: 11px; text-transform: uppercase; color: #888; margin-bottom: 4px; }
-                    .info-block p { font-size: 13px; margin-bottom: 2px; }
-                    .description { background: #f5f5f5; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; }
-                    .description label { font-size: 11px; text-transform: uppercase; color: #888; display: block; margin-bottom: 4px; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; }
-                    th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #eee; }
-                    th { background: #f0f0f0; font-size: 11px; text-transform: uppercase; color: #666; }
-                    .text-right { text-align: right; }
-                    .totals { margin-left: auto; width: 280px; }
-                    .totals tr td { padding: 6px 12px; }
-                    .totals .total-row { font-size: 16px; font-weight: 700; border-top: 2px solid #1a1a2e; }
-                    .footer { text-align: center; margin-top: 30px; font-size: 11px; color: #999; border-top: 1px solid #ddd; padding-top: 12px; }
-                    .estado { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
-                    .estado-pendiente { background: #fff3cd; color: #856404; }
-                    .estado-en_proceso { background: #cce5ff; color: #004085; }
-                    .estado-entregado { background: #d4edda; color: #155724; }
-                    .estado-cancelado { background: #f8d7da; color: #721c24; }
-                    @media print { body { padding: 15px; } }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <h1>JRJ Centro de Copias y Servicios</h1>
-                    <p>San Fernando de Monte Cristi, R.D.</p>
-                    <p style="margin-top:8px; font-size:14px; font-weight:600;">FACTURA DE TRABAJO MANUAL #${t.id}</p>
-                </div>
-                <div class="info-grid">
-                    <div class="info-block">
-                        <h4>Cliente</h4>
-                        <p style="font-weight:600">${cli?.nombre || 'Sin cliente'}</p>
-                        ${cli?.telefono ? `<p>${cli.telefono}</p>` : ''}
-                        ${cli?.direccion ? `<p>${cli.direccion}</p>` : ''}
+
+        if (formato === 'ticket') {
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Factura Trabajo #${t.id}</title>
+                    <style>
+                        @page { size: 80mm auto; margin: 0; }
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { font-family: 'Courier New', Courier, monospace; width: 80mm; padding: 4mm; color: #000; font-size: 10px; line-height: 1.4; }
+                        .divider { border: none; border-top: 1px dashed #000; margin: 6px 0; }
+                        .divider-double { border: none; border-top: 2px solid #000; margin: 6px 0; }
+                        .header { text-align: center; margin-bottom: 6px; }
+                        .header h1 { font-size: 13px; margin-bottom: 2px; font-weight: 900; }
+                        .header p { font-size: 9px; }
+                        .title { text-align: center; font-size: 11px; font-weight: 700; margin: 4px 0; }
+                        .info-row { display: flex; justify-content: space-between; font-size: 9px; margin-bottom: 1px; }
+                        .info-row .label { font-weight: 700; }
+                        .section-title { font-size: 9px; font-weight: 700; text-transform: uppercase; margin: 6px 0 3px 0; }
+                        .description { font-size: 9px; padding: 3px 0; word-wrap: break-word; }
+                        .abono-item { font-size: 9px; margin-bottom: 2px; }
+                        .total-line { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 1px; }
+                        .total-line.grand { font-size: 13px; font-weight: 900; border-top: 2px solid #000; padding-top: 4px; margin-top: 4px; }
+                        .footer { text-align: center; margin-top: 8px; font-size: 9px; }
+                        .estado { font-weight: 700; text-transform: uppercase; }
+                        @media print { body { width: 80mm; padding: 2mm; } }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>JRJ Centro de Copias</h1>
+                        <p>y Servicios</p>
+                        <p>San Fernando de Monte Cristi, R.D.</p>
                     </div>
-                    <div class="info-block">
-                        <h4>Información del Trabajo</h4>
-                        <p>Registrado por: ${usr?.nombre || '—'}</p>
-                        <p>Estado: <span class="estado estado-${t.estado}">${t.estado.replace('_', ' ')}</span></p>
+                    <hr class="divider-double"/>
+                    <div class="title">FACTURA TRABAJO #${t.id}</div>
+                    <hr class="divider"/>
+                    <div class="info-row"><span class="label">Cliente:</span><span>${cli?.nombre || 'Sin cliente'}</span></div>
+                    ${cli?.telefono ? `<div class="info-row"><span class="label">Tel:</span><span>${cli.telefono}</span></div>` : ''}
+                    ${cli?.direccion ? `<div class="info-row"><span class="label">Dir:</span><span>${cli.direccion}</span></div>` : ''}
+                    <div class="info-row"><span class="label">Atendido por:</span><span>${usr?.nombre || '—'}</span></div>
+                    <div class="info-row"><span class="label">Estado:</span><span class="estado">${t.estado.replace('_', ' ')}</span></div>
+                    <hr class="divider"/>
+                    <div class="info-row"><span class="label">Recibido:</span><span>${formatDate(t.fecha_recibido)}</span></div>
+                    <div class="info-row"><span class="label">Entrega Est.:</span><span>${formatDate(t.fecha_entrega_estimada)}</span></div>
+                    ${t.fecha_entrega_real ? `<div class="info-row"><span class="label">Entrega Real:</span><span>${formatDate(t.fecha_entrega_real)}</span></div>` : ''}
+                    <hr class="divider"/>
+                    <div class="section-title">Descripcion</div>
+                    <div class="description">${t.descripcion}</div>
+                    ${abonosList.length > 0 ? `
+                        <hr class="divider"/>
+                        <div class="section-title">Historial de Abonos</div>
+                        ${abonosList.map((a, i) => `
+                            <div class="abono-item">${i + 1}. RD$${formatMoney(a.monto)} - ${a.metodo_pago} (${formatDate(a.fecha)})${a.nota ? ' - ' + a.nota : ''}</div>
+                        `).join('')}
+                    ` : ''}
+                    <hr class="divider-double"/>
+                    <div class="total-line"><span>Precio Total:</span><span>RD$ ${formatMoney(t.precio_total)}</span></div>
+                    ${t.tiene_descuento ? `<div class="total-line"><span>Descuento:</span><span>-RD$ ${formatMoney(t.monto_descuento)}</span></div>` : ''}
+                    <div class="total-line"><span>Total Abonado:</span><span>RD$ ${formatMoney(t.total_abonado)}</span></div>
+                    <div class="total-line grand"><span>SALDO:</span><span>RD$ ${formatMoney(t.saldo_pendiente)}</span></div>
+                    <hr class="divider"/>
+                    <div class="footer">
+                        <p>Gracias por su preferencia</p>
+                        <p>JRJ Centro de Copias y Servicios</p>
                     </div>
-                </div>
-                <div class="info-grid">
-                    <div class="info-block">
-                        <h4>Fecha Recibido</h4>
-                        <p>${formatDate(t.fecha_recibido)}</p>
+                </body>
+                </html>
+            `);
+        } else {
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Factura Trabajo #${t.id}</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; color: #1a1a2e; }
+                        .header { text-align: center; margin-bottom: 24px; border-bottom: 2px solid #1a1a2e; padding-bottom: 16px; }
+                        .header h1 { font-size: 20px; margin-bottom: 4px; }
+                        .header p { font-size: 12px; color: #666; }
+                        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+                        .info-block h4 { font-size: 11px; text-transform: uppercase; color: #888; margin-bottom: 4px; }
+                        .info-block p { font-size: 13px; margin-bottom: 2px; }
+                        .description { background: #f5f5f5; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; }
+                        .description label { font-size: 11px; text-transform: uppercase; color: #888; display: block; margin-bottom: 4px; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; }
+                        th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #eee; }
+                        th { background: #f0f0f0; font-size: 11px; text-transform: uppercase; color: #666; }
+                        .text-right { text-align: right; }
+                        .totals { margin-left: auto; width: 280px; }
+                        .totals tr td { padding: 6px 12px; }
+                        .totals .total-row { font-size: 16px; font-weight: 700; border-top: 2px solid #1a1a2e; }
+                        .footer { text-align: center; margin-top: 30px; font-size: 11px; color: #999; border-top: 1px solid #ddd; padding-top: 12px; }
+                        .estado { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+                        .estado-pendiente { background: #fff3cd; color: #856404; }
+                        .estado-en_proceso { background: #cce5ff; color: #004085; }
+                        .estado-entregado { background: #d4edda; color: #155724; }
+                        .estado-cancelado { background: #f8d7da; color: #721c24; }
+                        @media print { body { padding: 15px; } }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1>JRJ Centro de Copias y Servicios</h1>
+                        <p>San Fernando de Monte Cristi, R.D.</p>
+                        <p style="margin-top:8px; font-size:14px; font-weight:600;">FACTURA DE TRABAJO MANUAL #${t.id}</p>
                     </div>
-                    <div class="info-block">
-                        <h4>Entrega Estimada</h4>
-                        <p>${formatDate(t.fecha_entrega_estimada)}</p>
+                    <div class="info-grid">
+                        <div class="info-block">
+                            <h4>Cliente</h4>
+                            <p style="font-weight:600">${cli?.nombre || 'Sin cliente'}</p>
+                            ${cli?.telefono ? `<p>${cli.telefono}</p>` : ''}
+                            ${cli?.direccion ? `<p>${cli.direccion}</p>` : ''}
+                        </div>
+                        <div class="info-block">
+                            <h4>Información del Trabajo</h4>
+                            <p>Registrado por: ${usr?.nombre || '—'}</p>
+                            <p>Estado: <span class="estado estado-${t.estado}">${t.estado.replace('_', ' ')}</span></p>
+                        </div>
                     </div>
-                </div>
-                <div class="description">
-                    <label>Descripción del Trabajo</label>
-                    ${t.descripcion}
-                </div>
-                ${abonosList.length > 0 ? `
-                    <h4 style="font-size:12px; margin-bottom:8px; color:#666; text-transform:uppercase;">Historial de Abonos</h4>
-                    <table>
-                        <thead><tr><th>Fecha</th><th>Método</th><th class="text-right">Monto</th><th>Nota</th></tr></thead>
-                        <tbody>
-                            ${abonosList.map(a => `
-                                <tr>
-                                    <td>${formatDateTime(a.fecha)}</td>
-                                    <td style="text-transform:capitalize">${a.metodo_pago}</td>
-                                    <td class="text-right" style="font-weight:600; color:#16a34a;">+RD$ ${formatMoney(a.monto)}</td>
-                                    <td>${a.nota || '—'}</td>
+                    <div class="info-grid">
+                        <div class="info-block">
+                            <h4>Fecha Recibido</h4>
+                            <p>${formatDate(t.fecha_recibido)}</p>
+                        </div>
+                        <div class="info-block">
+                            <h4>Entrega Estimada</h4>
+                            <p>${formatDate(t.fecha_entrega_estimada)}</p>
+                        </div>
+                    </div>
+                    <div class="description">
+                        <label>Descripción del Trabajo</label>
+                        ${t.descripcion}
+                    </div>
+                    ${abonosList.length > 0 ? `
+                        <h4 style="font-size:12px; margin-bottom:8px; color:#666; text-transform:uppercase;">Historial de Abonos</h4>
+                        <table>
+                            <thead><tr><th>Fecha</th><th>Método</th><th class="text-right">Monto</th><th>Nota</th></tr></thead>
+                            <tbody>
+                                ${abonosList.map(a => `
+                                    <tr>
+                                        <td>${formatDateTime(a.fecha)}</td>
+                                        <td style="text-transform:capitalize">${a.metodo_pago}</td>
+                                        <td class="text-right" style="font-weight:600; color:#16a34a;">+RD$ ${formatMoney(a.monto)}</td>
+                                        <td>${a.nota || '—'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    ` : ''}
+                    <div class="totals">
+                        <table>
+                            <tbody>
+                                <tr><td>Precio Total</td><td class="text-right">RD$ ${formatMoney(t.precio_total)}</td></tr>
+                                ${t.tiene_descuento ? `<tr><td style="color:#16a34a">Descuento</td><td class="text-right" style="color:#16a34a">-RD$ ${formatMoney(t.monto_descuento)}</td></tr>` : ''}
+                                <tr><td>Total Abonado</td><td class="text-right" style="color:#16a34a">RD$ ${formatMoney(t.total_abonado)}</td></tr>
+                                <tr class="total-row">
+                                    <td>Saldo Pendiente</td>
+                                    <td class="text-right" style="color:${t.saldo_pendiente > 0 ? '#dc2626' : '#16a34a'}">
+                                        RD$ ${formatMoney(t.saldo_pendiente)}
+                                    </td>
                                 </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                ` : ''}
-                <div class="totals">
-                    <table>
-                        <tbody>
-                            <tr><td>Precio Total</td><td class="text-right">RD$ ${formatMoney(t.precio_total)}</td></tr>
-                            ${t.tiene_descuento ? `<tr><td style="color:#16a34a">Descuento</td><td class="text-right" style="color:#16a34a">-RD$ ${formatMoney(t.monto_descuento)}</td></tr>` : ''}
-                            <tr><td>Total Abonado</td><td class="text-right" style="color:#16a34a">RD$ ${formatMoney(t.total_abonado)}</td></tr>
-                            <tr class="total-row">
-                                <td>Saldo Pendiente</td>
-                                <td class="text-right" style="color:${t.saldo_pendiente > 0 ? '#dc2626' : '#16a34a'}">
-                                    RD$ ${formatMoney(t.saldo_pendiente)}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="footer">
-                    <p>Gracias por su preferencia</p>
-                    <p>JRJ Centro de Copias y Servicios</p>
-                </div>
-            </body>
-            </html>
-        `);
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="footer">
+                        <p>Gracias por su preferencia</p>
+                        <p>JRJ Centro de Copias y Servicios</p>
+                    </div>
+                </body>
+                </html>
+            `);
+        }
         printWindow.document.close();
         setTimeout(() => { printWindow.print(); }, 300);
     };
@@ -402,7 +475,7 @@ export default function TrabajoDetalle() {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginTop: 'var(--space-5)' }}>
                                 <button
                                     className="btn btn-primary"
-                                    onClick={handlePrint}
+                                    onClick={() => setModalPrint(true)}
                                     style={{ width: '100%', justifyContent: 'center' }}
                                 >
                                     <Printer size={16} /> Imprimir Factura
@@ -419,6 +492,33 @@ export default function TrabajoDetalle() {
                     </div>
                 </div>
             </div>
+
+            {/* Modal Formato Impresión */}
+            {modalPrint && (
+                <Modal
+                    title="Seleccionar Formato de Impresión"
+                    onClose={() => setModalPrint(false)}
+                    footer={<button className="btn btn-secondary" onClick={() => setModalPrint(false)}>Cancelar</button>}
+                >
+                    <p style={{ marginBottom: 'var(--space-4)', color: 'var(--text-secondary)' }}>¿Cómo desea imprimir el comprobante?</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => handlePrint('ticket')}
+                            style={{ width: '100%', justifyContent: 'center', padding: 'var(--space-4)' }}
+                        >
+                            🧾 Ticket (Impresora Térmica 80mm)
+                        </button>
+                        <button
+                            className="btn btn-secondary"
+                            onClick={() => handlePrint('recibo')}
+                            style={{ width: '100%', justifyContent: 'center', padding: 'var(--space-4)' }}
+                        >
+                            📄 Recibo (Hoja Completa)
+                        </button>
+                    </div>
+                </Modal>
+            )}
 
             {/* Modal Abono */}
             {modalAbono && (
