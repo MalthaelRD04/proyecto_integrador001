@@ -1015,6 +1015,36 @@ tbody tr:last-child td {
   color: var(--text-secondary);
 }
 
+.login-card .form-input {
+  color: #0f172a;
+  background: #f0ece7;
+  -webkit-text-fill-color: #0f172a;
+}
+
+.login-card .form-input:focus {
+  color: #0f172a;
+  background: #ffffff;
+  -webkit-text-fill-color: #0f172a;
+}
+
+.login-card .form-input::placeholder {
+  color: #94a3b8;
+  -webkit-text-fill-color: #94a3b8;
+}
+
+.login-card .form-input:-webkit-autofill,
+.login-card .form-input:-webkit-autofill:hover,
+.login-card .form-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #0f172a;
+  -webkit-box-shadow: 0 0 0px 1000px #f0ece7 inset;
+  box-shadow: 0 0 0px 1000px #f0ece7 inset;
+  color: #0f172a;
+}
+
+.login-card .form-label {
+  color: #0f172a;
+}
+
 .login-btn {
   width: 100%;
   height: 44px;
