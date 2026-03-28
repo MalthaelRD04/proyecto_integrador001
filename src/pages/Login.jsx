@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Printer, AlertCircle } from 'lucide-react';
+import { Printer, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
     const { login } = useAuth();
     const [form, setForm] = useState({ usuario: '', password: '' });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -55,14 +56,31 @@ export default function Login() {
                     </div>
                     <div className="form-group">
                         <label className="form-label">Contraseña</label>
-                        <input
-                            type="password"
-                            className="form-input"
-                            placeholder="Ingrese su contraseña"
-                            value={form.password}
-                            onChange={e => setForm({ ...form, password: e.target.value })}
-                            required
-                        />
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                className="form-input"
+                                style={{ paddingRight: 40 }}
+                                placeholder="Ingrese su contraseña"
+                                value={form.password}
+                                onChange={e => setForm({ ...form, password: e.target.value })}
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(v => !v)}
+                                style={{
+                                    position: 'absolute', right: 10, top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    background: 'none', border: 'none',
+                                    color: 'var(--text-muted)', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', padding: 0,
+                                }}
+                                title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                            >
+                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                        </div>
                     </div>
                     <button
                         type="submit"

@@ -15,6 +15,7 @@ import FacturaDetalle from './pages/FacturaDetalle';
 import Trabajos from './pages/Trabajos';
 import TrabajoDetalle from './pages/TrabajoDetalle';
 import Reportes from './pages/Reportes';
+import PerfilUsuario from './pages/PerfilUsuario';
 
 function ProtectedRoute() {
     const { isAuthenticated } = useAuth();
@@ -62,6 +63,7 @@ function AppRoutes() {
             <Route path="/trabajos" element={<AppLayout title="Trabajos"><Trabajos /></AppLayout>} />
             <Route path="/trabajos/:id" element={<AppLayout title="Detalle de Trabajo"><TrabajoDetalle /></AppLayout>} />
             <Route path="/reportes" element={<AppLayout title="Reportes"><Reportes /></AppLayout>} />
+            <Route path="/usuarios/:id/perfil" element={<AppLayout title="Configuración de Usuario"><PerfilUsuario /></AppLayout>} />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );

@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getAll, create, update } from '../data/store';
 import Modal from '../components/Modal';
-import { Plus, Search, Edit2, UserCheck, UserX } from 'lucide-react';
+import { Plus, Search, Edit2, UserCheck, UserX, Settings } from 'lucide-react';
 
 export default function Usuarios() {
+    const navigate = useNavigate();
     const [data, setData] = useState([]);
     const [search, setSearch] = useState('');
     const [modal, setModal] = useState(null);
@@ -100,6 +102,13 @@ export default function Usuarios() {
                                                 title={u.activo ? 'Desactivar' : 'Activar'}
                                             >
                                                 {u.activo ? <UserX size={14} /> : <UserCheck size={14} />}
+                                            </button>
+                                            <button
+                                                className="btn btn-icon btn-sm btn-ghost"
+                                                onClick={() => navigate(`/usuarios/${u.id}/perfil`)}
+                                                title="Configuración de perfil"
+                                            >
+                                                <Settings size={14} />
                                             </button>
                                         </div>
                                     </td>
