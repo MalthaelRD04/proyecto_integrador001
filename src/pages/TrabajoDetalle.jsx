@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { getById, getAll, update, registrarAbono, formatMoney, formatDate, formatDateTime } from '../data/store';
 import Modal from '../components/Modal';
 import { ArrowLeft, Plus, DollarSign, Calendar, User, AlertCircle, CheckCircle, Printer, MessageCircle } from 'lucide-react';
+import { generarPDFTrabajo } from '../utils/pdfGenerator';
 
 export default function TrabajoDetalle() {
     const { id } = useParams();
@@ -30,37 +31,7 @@ export default function TrabajoDetalle() {
     const cliente = getById('clientes', trabajo.cliente_id);
     const usuario = getById('usuarios', trabajo.usuario_id);
 
-    const generateInvoiceText = (t, cli, abonosList) => {
-        const neto = Number(t.precio_total) - Number(t.monto_descuento);
-        let text = `📋 *FACTURA DE TRABAJO MANUAL*\n`;
-        text += `━━━━━━━━━━━━━━━━━━━━\n`;
-        text += `🏢 *JRJ Centro de Copias y Servicios*\n`;
-        text += `📍 San Fernando de Monte Cristi, R.D.\n`;
-        text += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-        text += `👤 *Cliente:* ${cli?.nombre || 'Sin cliente'}\n`;
-        if (cli?.telefono) text += `📞 *Teléfono:* ${cli.telefono}\n`;
-        if (cli?.direccion) text += `📍 *Dirección:* ${cli.direccion}\n`;
-        text += `\n📝 *Descripción:*\n${t.descripcion}\n\n`;
-        text += `📅 *Fecha Recibido:* ${formatDate(t.fecha_recibido)}\n`;
-        text += `📅 *Entrega Estimada:* ${formatDate(t.fecha_entrega_estimada)}\n`;
-        if (t.fecha_entrega_real) text += `✅ *Entrega Real:* ${formatDate(t.fecha_entrega_real)}\n`;
-        text += `\n━━━━━━━━━━━━━━━━━━━━\n`;
-        text += `💰 *RESUMEN FINANCIERO*\n`;
-        text += `━━━━━━━━━━━━━━━━━━━━\n`;
-        text += `   Precio Total:  RD$ ${formatMoney(t.precio_total)}\n`;
-        if (t.tiene_descuento) text += `   Descuento:    -RD$ ${formatMoney(t.monto_descuento)}\n`;
-        text += `   Total Abonado:  RD$ ${formatMoney(t.total_abonado)}\n`;
-        text += `   *Saldo Pendiente: RD$ ${formatMoney(t.saldo_pendiente)}*\n\n`;
-        if (abonosList.length > 0) {
-            text += `📜 *HISTORIAL DE ABONOS*\n`;
-            text += `━━━━━━━━━━━━━━━━━━━━\n`;
-            abonosList.forEach((a, i) => {
-                text += `${i + 1}. RD$ ${formatMoney(a.monto)} - ${a.metodo_pago} (${formatDate(a.fecha)})\n`;
-            });
-        }
-        text += `\n✨ _Gracias por su preferencia_`;
-        return text;
-    };
+
 
     const handlePrint = (formato) => {
         setModalPrint(false);
@@ -251,16 +222,9 @@ export default function TrabajoDetalle() {
     const handleWhatsApp = () => {
         const t = getById('trabajos', id);
         const cli = getById('clientes', t.cliente_id);
+        const usr = getById('usuarios', t.usuario_id);
         const abonosList = getAll('abonos_trabajo').filter(a => a.trabajo_id === Number(id));
-        const text = generateInvoiceText(t, cli, abonosList);
-        let phone = cli?.telefono?.replace(/[^0-9]/g, '') || '';
-        if (phone && !phone.startsWith('1') && !phone.startsWith('52')) {
-            phone = '1' + phone;
-        }
-        const url = phone
-            ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}`
-            : `https://wa.me/?text=${encodeURIComponent(text)}`;
-        window.open(url, '_blank');
+        generarPDFTrabajo(t, cli, usr, abonosList, 'download_and_whatsapp');
     };
 
     const estadoBadge = (estado) => {

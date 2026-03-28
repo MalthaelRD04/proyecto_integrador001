@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getAll, getById, formatMoney, formatDateTime } from '../data/store';
-import { Search, Eye, FileText } from 'lucide-react';
+import { Search, Eye, FileText, MessageCircle } from 'lucide-react';
+import { generarPDFFactura } from '../utils/pdfGenerator';
 
 export default function Facturas() {
     const [facturas, setFacturas] = useState([]);
@@ -70,7 +71,19 @@ export default function Facturas() {
                                             </span>
                                         </td>
                                         <td className="text-right font-mono font-bold">RD$ {formatMoney(f.total)}</td>
-                                        <td>
+                                        <td style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+                                            <button 
+                                                className="btn btn-sm btn-ghost text-success" 
+                                                style={{ color: '#25D366' }}
+                                                onClick={() => {
+                                                    const detalles = getAll('detalle_factura').filter(d => d.factura_id === f.id);
+                                                    const usuario = getById('usuarios', f.usuario_id);
+                                                    generarPDFFactura(f, cliente, usuario, detalles, 'download_and_whatsapp');
+                                                }}
+                                                title="Enviar por WhatsApp"
+                                            >
+                                                <MessageCircle size={14} /> 
+                                            </button>
                                             <Link to={`/facturas/${f.id}`} className="btn btn-sm btn-ghost">
                                                 <Eye size={14} /> Ver
                                             </Link>

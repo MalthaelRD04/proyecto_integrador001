@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -66,12 +67,39 @@ function AppRoutes() {
     );
 }
 
+export const applyTheme = (themeStr) => {
+    if (themeStr === 'system') {
+        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    } else {
+        document.documentElement.setAttribute('data-theme', themeStr);
+    }
+};
+
 export default function App() {
+    useEffect(() => {
+        const storedTheme = localStorage.getItem('app_theme') || 'system';
+        applyTheme(storedTheme);
+
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        const handleChange = () => {
+            if ((localStorage.getItem('app_theme') || 'system') === 'system') {
+                applyTheme('system');
+            }
+        };
+        mediaQuery.addEventListener('change', handleChange);
+
+        const storedFontSize = localStorage.getItem('app_fontSize') || '16px';
+        document.documentElement.style.fontSize = storedFontSize;
+
+        return () => mediaQuery.removeEventListener('change', handleChange);
+    }, []);
+
     return (
-        <BrowserRouter>
+        <HashRouter>
             <AuthProvider>
                 <AppRoutes />
             </AuthProvider>
-        </BrowserRouter>
+        </HashRouter>
     );
 }

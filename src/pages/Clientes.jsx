@@ -39,7 +39,13 @@ export default function Clientes() {
     };
 
     const handleDelete = (id) => {
-        if (confirm('¿Eliminar este cliente?')) {
+        if (confirm('¿Eliminar este cliente y todos sus trabajos asociados permanentemente?')) {
+            const trabajosCliente = getAll('trabajos').filter(t => t.cliente_id === id);
+            trabajosCliente.forEach(t => {
+                const abonos = getAll('abonos_trabajo').filter(a => a.trabajo_id === t.id);
+                abonos.forEach(a => remove('abonos_trabajo', a.id));
+                remove('trabajos', t.id);
+            });
             remove('clientes', id);
             reload();
         }

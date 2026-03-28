@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
 import { getById, getAll, formatMoney, formatDateTime } from '../data/store';
 import Modal from '../components/Modal';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { ArrowLeft, Printer, MessageCircle } from 'lucide-react';
+import { generarPDFFactura } from '../utils/pdfGenerator';
 
 export default function FacturaDetalle() {
     const { id } = useParams();
@@ -221,9 +222,14 @@ export default function FacturaDetalle() {
                 <Link to="/facturas" className="btn btn-secondary">
                     <ArrowLeft size={16} /> Volver
                 </Link>
-                <button className="btn btn-primary" onClick={() => setModalPrint(true)}>
-                    <Printer size={16} /> Imprimir
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="btn btn-success" style={{ backgroundColor: '#25D366', color: 'white', borderColor: '#25D366' }} onClick={() => generarPDFFactura(factura, cliente, usuario, detalles, 'download_and_whatsapp')}>
+                        <MessageCircle size={16} /> WhatsApp
+                    </button>
+                    <button className="btn btn-primary" onClick={() => setModalPrint(true)}>
+                        <Printer size={16} /> Imprimir
+                    </button>
+                </div>
             </div>
 
             <div className="card">

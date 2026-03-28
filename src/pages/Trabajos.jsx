@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getAll, crearTrabajo, update, getById, formatMoney, formatDate } from '../data/store';
+import { getAll, crearTrabajo, update, remove, getById, formatMoney, formatDate } from '../data/store';
 import { useAuth } from '../contexts/AuthContext';
 import Modal from '../components/Modal';
-import { Plus, Search, Eye, Briefcase } from 'lucide-react';
+import { Plus, Search, Eye, Briefcase, Edit2, Trash2, MessageCircle } from 'lucide-react';
+import { generarPDFTrabajo } from '../utils/pdfGenerator';
 
 export default function Trabajos() {
     const { user } = useAuth();
@@ -45,19 +46,57 @@ export default function Trabajos() {
 
     const handleSave = () => {
         if (!form.cliente_id || !form.descripcion || !form.precio_total) return;
-        crearTrabajo({
+        const nuevoPrecio = Number(form.precio_total);
+        const nuevoDescto = form.tiene_descuento ? Number(form.monto_descuento) || 0 : 0;
+
+        const payload = {
             cliente_id: Number(form.cliente_id),
             usuario_id: user.id,
             descripcion: form.descripcion,
-            precio_total: Number(form.precio_total),
+            precio_total: nuevoPrecio,
             tiene_descuento: form.tiene_descuento,
-            monto_descuento: form.tiene_descuento ? Number(form.monto_descuento) || 0 : 0,
+            monto_descuento: nuevoDescto,
             fecha_entrega_estimada: form.fecha_entrega_estimada || null,
             nota: form.nota,
-        });
+        };
+
+        if (form.id) {
+            payload.saldo_pendiente = nuevoPrecio - nuevoDescto - (Number(form.total_abonado) || 0);
+            if (payload.saldo_pendiente <= 0) {
+                payload.saldo_pendiente = 0;
+                payload.estado = 'entregado';
+                payload.fecha_entrega_real = payload.fecha_entrega_real || new Date().toISOString();
+            } else if (form.estado === 'entregado') {
+                payload.estado = 'en_proceso';
+                payload.fecha_entrega_real = null;
+            }
+            update('trabajos', form.id, payload);
+        } else {
+            crearTrabajo(payload);
+        }
+        
         setModal(false);
         setForm({ cliente_id: '', descripcion: '', precio_total: '', tiene_descuento: false, monto_descuento: '', fecha_entrega_estimada: '', nota: '' });
         reload();
+    };
+
+    const openCreate = () => {
+        setForm({ cliente_id: '', descripcion: '', precio_total: '', tiene_descuento: false, monto_descuento: '', fecha_entrega_estimada: '', nota: '' });
+        setModal(true);
+    };
+
+    const openEdit = (t) => {
+        setForm({ ...t, precio_total: t.precio_total, fecha_entrega_estimada: t.fecha_entrega_estimada || '' });
+        setModal(true);
+    };
+
+    const handleDelete = (id) => {
+        if (confirm('¿Estás seguro de eliminar permanentemente este trabajo y todos sus pagos registrados?')) {
+            const abonos = getAll('abonos_trabajo').filter(a => a.trabajo_id === id);
+            abonos.forEach(a => remove('abonos_trabajo', a.id));
+            remove('trabajos', id);
+            reload();
+        }
     };
 
     return (
@@ -76,7 +115,7 @@ export default function Trabajos() {
                         <option value="cancelado">Cancelado</option>
                     </select>
                 </div>
-                <button className="btn btn-primary" onClick={() => setModal(true)}>
+                <button className="btn btn-primary" onClick={openCreate}>
                     <Plus size={16} /> Nuevo Trabajo
                 </button>
             </div>
@@ -113,9 +152,25 @@ export default function Trabajos() {
                                         </td>
                                         <td className="text-muted">{formatDate(t.fecha_entrega_estimada)}</td>
                                         <td>
-                                            <Link to={`/trabajos/${t.id}`} className="btn btn-sm btn-ghost">
-                                                <Eye size={14} /> Ver
-                                            </Link>
+                                            <div className="flex gap-2" style={{ justifyContent: 'flex-end', display: 'flex' }}>
+                                                <button 
+                                                    className="btn btn-icon btn-sm btn-ghost text-success" 
+                                                    style={{ color: '#25D366' }}
+                                                    onClick={() => {
+                                                        const usr = getById('usuarios', t.usuario_id);
+                                                        const abonosList = getAll('abonos_trabajo').filter(a => a.trabajo_id === t.id);
+                                                        generarPDFTrabajo(t, cliente, usr, abonosList, 'download_and_whatsapp');
+                                                    }}
+                                                    title="WhatsApp con PDF"
+                                                >
+                                                    <MessageCircle size={14} />
+                                                </button>
+                                                <button className="btn btn-icon btn-sm btn-ghost" onClick={() => openEdit(t)} title="Editar"><Edit2 size={14} /></button>
+                                                <button className="btn btn-icon btn-sm btn-ghost" onClick={() => handleDelete(t.id)} title="Eliminar"><Trash2 size={14} /></button>
+                                                <Link to={`/trabajos/${t.id}`} className="btn btn-sm btn-ghost">
+                                                    <Eye size={14} /> Ver
+                                                </Link>
+                                            </div>
                                         </td>
                                     </tr>
                                 );

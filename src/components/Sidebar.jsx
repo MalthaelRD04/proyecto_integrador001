@@ -3,9 +3,11 @@ import { useAuth } from '../contexts/AuthContext';
 import {
     LayoutDashboard, Users, UserCircle, Tag, Package,
     FileText, Receipt, Briefcase, CreditCard, BarChart3,
-    LogOut, Printer, Menu, X
+    LogOut, Printer, Menu, Settings, Moon, Sun, Monitor, Type
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Modal from './Modal';
+import { applyTheme } from '../App';
 
 const navItems = [
     {
@@ -43,6 +45,20 @@ export default function Sidebar() {
     const { user, logout } = useAuth();
     const location = useLocation();
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [settingsModal, setSettingsModal] = useState(false);
+    
+    const [theme, setTheme] = useState(localStorage.getItem('app_theme') || 'system');
+    const [fontSize, setFontSize] = useState(localStorage.getItem('app_fontSize') || '16px');
+
+    useEffect(() => {
+        applyTheme(theme);
+        localStorage.setItem('app_theme', theme);
+    }, [theme]);
+
+    useEffect(() => {
+        document.documentElement.style.fontSize = fontSize;
+        localStorage.setItem('app_fontSize', fontSize);
+    }, [fontSize]);
 
     return (
         <>
@@ -106,6 +122,14 @@ export default function Sidebar() {
                 <div className="sidebar-footer">
                     <button
                         className="sidebar-link"
+                        onClick={() => setSettingsModal(true)}
+                        style={{ width: '100%', border: 'none', background: 'none', textAlign: 'left', marginBottom: '8px' }}
+                    >
+                        <Settings size={18} />
+                        Ajustes
+                    </button>
+                    <button
+                        className="sidebar-link text-danger"
                         onClick={logout}
                         style={{ width: '100%', border: 'none', background: 'none', textAlign: 'left' }}
                     >
@@ -114,6 +138,72 @@ export default function Sidebar() {
                     </button>
                 </div>
             </aside>
+
+            {/* Modal de Ajustes */}
+            {settingsModal && (
+                <Modal
+                    title="Ajustes de Interfaz"
+                    onClose={() => setSettingsModal(false)}
+                    footer={
+                        <button className="btn btn-primary" onClick={() => setSettingsModal(false)}>Hecho</button>
+                    }
+                >
+                    <div style={{ marginBottom: 'var(--space-6)' }}>
+                        <div className="form-label mb-3" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                            <Moon size={16} /> Tema Visual
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                            <button 
+                                className={`btn ${theme === 'light' ? 'btn-primary' : 'btn-secondary'}`} 
+                                onClick={() => setTheme('light')}
+                            >
+                                <Sun size={14} /> Claro
+                            </button>
+                            <button 
+                                className={`btn ${theme === 'dark' ? 'btn-primary' : 'btn-secondary'}`} 
+                                onClick={() => setTheme('dark')}
+                            >
+                                <Moon size={14} /> Oscuro
+                            </button>
+                            <button 
+                                className={`btn ${theme === 'system' ? 'btn-primary' : 'btn-secondary'}`} 
+                                onClick={() => setTheme('system')}
+                            >
+                                <Monitor size={14} /> Auto
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div className="form-label mb-3" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                            <Type size={16} /> Tamaño de Tipografía
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                            <button 
+                                className={`btn ${fontSize === '14px' ? 'btn-primary' : 'btn-secondary'}`} 
+                                onClick={() => setFontSize('14px')}
+                            >
+                                Pequeña
+                            </button>
+                            <button 
+                                className={`btn ${fontSize === '16px' ? 'btn-primary' : 'btn-secondary'}`} 
+                                onClick={() => setFontSize('16px')}
+                            >
+                                Normal
+                            </button>
+                            <button 
+                                className={`btn ${fontSize === '18px' ? 'btn-primary' : 'btn-secondary'}`} 
+                                onClick={() => setFontSize('18px')}
+                            >
+                                Grande
+                            </button>
+                        </div>
+                        <p className="form-hint" style={{ marginTop: '12px' }}>
+                            Ajustar el tamaño ampliará todos los textos de la interfaz para tu comodidad visual.
+                        </p>
+                    </div>
+                </Modal>
+            )}
         </>
     );
 }
