@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getById, update } from '../data/store';
+import { getById, update, guardarFotoUsuario, obtenerFotoUsuario, eliminarFotoUsuario } from '../data/store';
 import {
     User, Camera, Save, ArrowLeft, Lock, Mail,
     Phone, MapPin, Shield, CheckCircle, AlertCircle,
@@ -49,7 +49,7 @@ export default function PerfilUsuario() {
             direccion: u.direccion || '',
             bio: u.bio || '',
         });
-        const savedFoto = localStorage.getItem(`jrj_foto_${u.id}`);
+        const savedFoto = obtenerFotoUsuario(u.id);
         if (savedFoto) {
             setFotoGuardada(savedFoto);
             setFotoPreview(savedFoto);
@@ -84,14 +84,14 @@ export default function PerfilUsuario() {
             showToast('No hay foto seleccionada.', 'error');
             return;
         }
-        localStorage.setItem(`jrj_foto_${id}`, fotoPreview);
+        guardarFotoUsuario(Number(id), fotoPreview);
         setFotoGuardada(fotoPreview);
         showToast('Foto de perfil guardada correctamente.');
     };
 
     // ── Eliminar foto ──
     const handleEliminarFoto = () => {
-        localStorage.removeItem(`jrj_foto_${id}`);
+        eliminarFotoUsuario(Number(id));
         setFotoGuardada(null);
         setFotoPreview(null);
         setConfirmEliminar(false);

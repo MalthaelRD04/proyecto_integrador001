@@ -172,7 +172,7 @@ export default function Facturacion() {
                             <span className="card-title">Agregar Productos / Servicios</span>
                         </div>
                         <div className="card-body">
-                            <div style={{ position: 'relative' }}>
+                            <div style={{ position: 'relative', zIndex: showSearch ? 10 : 1 }}>
                                 <div className="search-input-wrapper">
                                     <Search size={16} />
                                     <input

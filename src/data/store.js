@@ -1,79 +1,366 @@
 // =============================================
 // JRJ Centro de Copias y Servicios
-// Data Store — localStorage simulation of DB
+// Data Store — SQLite via sql.js
 // =============================================
 
-const DB_KEY = 'jrj_sistema_db';
+import initSqlJs from 'sql.js';
 
-// Seed data
-const SEED_DATA = {
-    usuarios: [
-        { id: 1, nombre: 'José Rodríguez', usuario: 'admin', contrasena_hash: 'admin123', rol: 'admin', activo: true, creado_en: '2025-01-01T08:00:00' },
-        { id: 2, nombre: 'María García', usuario: 'maria', contrasena_hash: 'maria123', rol: 'empleado', activo: true, creado_en: '2025-02-15T09:00:00' },
-    ],
-    categorias: [
-        { id: 1, nombre: 'Útiles Escolares', descripcion: 'Material escolar y de oficina' },
-        { id: 2, nombre: 'Consumibles Impresora', descripcion: 'Tinta, tóner, papel' },
-        { id: 3, nombre: 'Servicios de Copias', descripcion: 'Fotocopias, impresiones, encuadernados' },
-        { id: 4, nombre: 'Decoración', descripcion: 'Artículos y servicios de decoración' },
-    ],
-    items: [
-        { id: 1, es_producto: true, nombre: 'Resma de Papel A4', descripcion: 'Resma 500 hojas', precio_venta: 250.00, costo: 180.00, stock: 45, stock_minimo: 10, categoria_id: 2, activo: true, creado_en: '2025-01-10', actualizado_en: '2025-01-10' },
-        { id: 2, es_producto: true, nombre: 'Cartucho Tinta Negro', descripcion: 'HP 664 Negro', precio_venta: 850.00, costo: 600.00, stock: 8, stock_minimo: 5, categoria_id: 2, activo: true, creado_en: '2025-01-10', actualizado_en: '2025-01-10' },
-        { id: 3, es_producto: true, nombre: 'Lápiz HB', descripcion: 'Lápiz grafito HB', precio_venta: 15.00, costo: 8.00, stock: 120, stock_minimo: 20, categoria_id: 1, activo: true, creado_en: '2025-01-10', actualizado_en: '2025-01-10' },
-        { id: 4, es_producto: true, nombre: 'Cuaderno 100 Hojas', descripcion: 'Cuaderno rayado', precio_venta: 75.00, costo: 45.00, stock: 3, stock_minimo: 10, categoria_id: 1, activo: true, creado_en: '2025-01-10', actualizado_en: '2025-01-10' },
-        { id: 5, es_producto: true, nombre: 'Cajas de Sardina', descripcion: 'Caja de sardina', precio_venta: 200.00, costo: 150.00, stock: 25, stock_minimo: 5, categoria_id: 1, activo: true, creado_en: '2025-01-10', actualizado_en: '2025-01-10' },
-        { id: 6, es_producto: true, nombre: 'Mayonesa', descripcion: 'Mayonesa grande', precio_venta: 80.00, costo: 55.00, stock: 15, stock_minimo: 5, categoria_id: 1, activo: true, creado_en: '2025-01-10', actualizado_en: '2025-01-10' },
-        { id: 7, es_producto: false, nombre: 'Fotocopia B/N', descripcion: 'Copia blanco y negro carta', precio_venta: 5.00, costo: 0, stock: 0, stock_minimo: 0, categoria_id: 3, activo: true, creado_en: '2025-01-10', actualizado_en: '2025-01-10' },
-        { id: 8, es_producto: false, nombre: 'Impresión a Color', descripcion: 'Impresión carta a color', precio_venta: 25.00, costo: 0, stock: 0, stock_minimo: 0, categoria_id: 3, activo: true, creado_en: '2025-01-10', actualizado_en: '2025-01-10' },
-        { id: 9, es_producto: false, nombre: 'Encuadernado', descripcion: 'Encuadernado tipo espiral', precio_venta: 150.00, costo: 0, stock: 0, stock_minimo: 0, categoria_id: 3, activo: true, creado_en: '2025-01-10', actualizado_en: '2025-01-10' },
-        { id: 10, es_producto: false, nombre: 'Laminado', descripcion: 'Laminado carta', precio_venta: 100.00, costo: 0, stock: 0, stock_minimo: 0, categoria_id: 3, activo: true, creado_en: '2025-01-10', actualizado_en: '2025-01-10' },
-    ],
-    clientes: [
-        { id: 1, nombre: 'Jeff Martínez', telefono: '809-555-0001', direccion: 'Calle Duarte #15, Monte Cristi', creado_en: '2025-01-15' },
-        { id: 2, nombre: 'Ana Pérez', telefono: '809-555-0002', direccion: 'Av. Mella #45', creado_en: '2025-02-01' },
-        { id: 3, nombre: 'Carlos Rodríguez', telefono: '829-555-0003', direccion: 'Los Girasoles #8', creado_en: '2025-02-10' },
-    ],
-    facturas: [
-        { id: 1, numero_factura: 'PCI-4', cliente_id: 1, usuario_id: 1, subtotal: 2915.25, impuesto: 524.75, total: 3440.00, metodo_pago: 'efectivo', estado: 'pagada', nota: '', fecha: '2025-02-20T10:30:00' },
-        { id: 2, numero_factura: 'PCI-5', cliente_id: 2, usuario_id: 1, subtotal: 500.00, impuesto: 90.00, total: 590.00, metodo_pago: 'tarjeta', estado: 'pagada', nota: '', fecha: '2025-02-25T09:00:00' },
-    ],
-    detalle_factura: [
-        { id: 1, factura_id: 1, item_id: 5, descripcion: 'Cajas de Sardina', cantidad: 7, precio_unitario: 213.06, subtotal: 1188.44 },
-        { id: 2, factura_id: 1, item_id: 6, descripcion: 'Mayonesa', cantidad: 8, precio_unitario: 97.63, subtotal: 543.37 },
-        { id: 3, factura_id: 1, item_id: 5, descripcion: 'Cajas de Sardina', cantidad: 7, precio_unitario: 213.06, subtotal: 1188.44 },
-        { id: 4, factura_id: 2, item_id: 1, descripcion: 'Resma de Papel A4', cantidad: 2, precio_unitario: 250.00, subtotal: 500.00 },
-    ],
-    trabajos: [
-        { id: 1, cliente_id: 1, usuario_id: 1, descripcion: 'Decoración de salón para fiesta de cumpleaños', precio_total: 5000.00, tiene_descuento: true, monto_descuento: 500.00, total_abonado: 2000.00, saldo_pendiente: 2500.00, estado: 'en_proceso', fecha_recibido: '2025-02-18T08:00:00', fecha_entrega_estimada: '2025-02-28', fecha_entrega_real: null, nota: 'Tema: unicornios' },
-        { id: 2, cliente_id: 3, usuario_id: 1, descripcion: 'Impresión de 200 invitaciones', precio_total: 3000.00, tiene_descuento: false, monto_descuento: 0, total_abonado: 3000.00, saldo_pendiente: 0, estado: 'entregado', fecha_recibido: '2025-02-10T09:00:00', fecha_entrega_estimada: '2025-02-15', fecha_entrega_real: '2025-02-14T16:00:00', nota: '' },
-    ],
-    abonos_trabajo: [
-        { id: 1, trabajo_id: 1, monto: 1000.00, metodo_pago: 'efectivo', nota: 'Primer abono', fecha: '2025-02-18T08:00:00' },
-        { id: 2, trabajo_id: 1, monto: 1000.00, metodo_pago: 'transferencia', nota: 'Segundo abono', fecha: '2025-02-22T10:00:00' },
-        { id: 3, trabajo_id: 2, monto: 3000.00, metodo_pago: 'efectivo', nota: 'Pago total', fecha: '2025-02-10T09:00:00' },
-    ],
-    _counters: {
-        factura_num: 5,
-    }
-};
+let db = null;
+let _dbReady = false;
+let _saveTimer = null;
 
-function getDB() {
-    const raw = localStorage.getItem(DB_KEY);
-    if (!raw) {
-        localStorage.setItem(DB_KEY, JSON.stringify(SEED_DATA));
-        return JSON.parse(JSON.stringify(SEED_DATA));
+// ── Inicialización ──
+
+export async function initDatabase() {
+    const SQL = await initSqlJs({
+        locateFile: file => `${import.meta.env.BASE_URL}${file}`
+    });
+
+    // Intentar cargar DB existente desde archivo (Electron) o localStorage (browser)
+    let savedData = null;
+
+    if (window.electronAPI && window.electronAPI.loadDatabase) {
+        try {
+            savedData = await window.electronAPI.loadDatabase();
+        } catch (e) {
+            console.warn('No se pudo cargar DB desde archivo:', e);
+        }
+    } else {
+        // Fallback: localStorage (para modo dev en navegador)
+        const lsData = localStorage.getItem('jrj_sqlite_db');
+        if (lsData) {
+            try {
+                const binary = atob(lsData);
+                savedData = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    savedData[i] = binary.charCodeAt(i);
+                }
+            } catch (e) {
+                console.warn('No se pudo cargar DB desde localStorage:', e);
+            }
+        }
     }
-    return JSON.parse(raw);
+
+    if (savedData && savedData.length > 0) {
+        try {
+            db = new SQL.Database(new Uint8Array(savedData));
+            // Verificar que las tablas existen
+            const tables = db.exec("SELECT name FROM sqlite_master WHERE type='table'");
+            if (!tables.length || tables[0].values.length < 2) {
+                throw new Error('DB corrupta o vacía');
+            }
+            // Migrar: agregar columna foto si no existe
+            migrateDB();
+        } catch (e) {
+            console.warn('DB corrupta, creando nueva:', e);
+            db = new SQL.Database();
+            createTables();
+            seedData();
+        }
+    } else {
+        db = new SQL.Database();
+        createTables();
+        seedData();
+    }
+
+    _dbReady = true;
+    persistDB();
+    return db;
 }
 
-function saveDB(db) {
-    localStorage.setItem(DB_KEY, JSON.stringify(db));
+export function isDBReady() {
+    return _dbReady;
 }
 
-function nextId(arr) {
-    if (arr.length === 0) return 1;
-    return Math.max(...arr.map(i => i.id)) + 1;
+// ── Crear Tablas ──
+
+function createTables() {
+    db.run(`
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            usuario TEXT UNIQUE NOT NULL,
+            contrasena_hash TEXT NOT NULL,
+            rol TEXT DEFAULT 'admin',
+            activo INTEGER DEFAULT 1,
+            telefono TEXT DEFAULT '',
+            correo TEXT DEFAULT '',
+            direccion TEXT DEFAULT '',
+            bio TEXT DEFAULT '',
+            foto TEXT DEFAULT '',
+            creado_en TEXT DEFAULT (datetime('now','localtime'))
+        )
+    `);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS categorias (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT UNIQUE NOT NULL,
+            descripcion TEXT DEFAULT ''
+        )
+    `);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            es_producto INTEGER NOT NULL DEFAULT 1,
+            nombre TEXT NOT NULL,
+            descripcion TEXT DEFAULT '',
+            precio_venta REAL NOT NULL,
+            costo REAL DEFAULT 0,
+            stock INTEGER DEFAULT 0,
+            stock_minimo INTEGER DEFAULT 5,
+            categoria_id INTEGER,
+            activo INTEGER DEFAULT 1,
+            creado_en TEXT DEFAULT (datetime('now','localtime')),
+            actualizado_en TEXT DEFAULT (datetime('now','localtime')),
+            FOREIGN KEY (categoria_id) REFERENCES categorias(id)
+        )
+    `);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS clientes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL,
+            telefono TEXT DEFAULT '',
+            direccion TEXT DEFAULT '',
+            creado_en TEXT DEFAULT (datetime('now','localtime'))
+        )
+    `);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS facturas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            numero_factura TEXT UNIQUE NOT NULL,
+            cliente_id INTEGER,
+            usuario_id INTEGER NOT NULL,
+            subtotal REAL NOT NULL,
+            impuesto REAL DEFAULT 0,
+            total REAL NOT NULL,
+            metodo_pago TEXT DEFAULT 'efectivo',
+            estado TEXT DEFAULT 'pagada',
+            nota TEXT DEFAULT '',
+            fecha TEXT DEFAULT (datetime('now','localtime')),
+            FOREIGN KEY (cliente_id) REFERENCES clientes(id),
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        )
+    `);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS detalle_factura (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            factura_id INTEGER NOT NULL,
+            item_id INTEGER NOT NULL,
+            descripcion TEXT NOT NULL,
+            cantidad INTEGER NOT NULL,
+            precio_unitario REAL NOT NULL,
+            subtotal REAL NOT NULL,
+            FOREIGN KEY (factura_id) REFERENCES facturas(id),
+            FOREIGN KEY (item_id) REFERENCES items(id)
+        )
+    `);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS trabajos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            cliente_id INTEGER NOT NULL,
+            usuario_id INTEGER NOT NULL,
+            descripcion TEXT NOT NULL,
+            precio_total REAL NOT NULL,
+            tiene_descuento INTEGER DEFAULT 0,
+            monto_descuento REAL DEFAULT 0,
+            total_abonado REAL DEFAULT 0,
+            saldo_pendiente REAL NOT NULL,
+            estado TEXT DEFAULT 'pendiente',
+            fecha_recibido TEXT DEFAULT (datetime('now','localtime')),
+            fecha_entrega_estimada TEXT,
+            fecha_entrega_real TEXT,
+            nota TEXT DEFAULT '',
+            FOREIGN KEY (cliente_id) REFERENCES clientes(id),
+            FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+        )
+    `);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS abonos_trabajo (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            trabajo_id INTEGER NOT NULL,
+            monto REAL NOT NULL,
+            metodo_pago TEXT DEFAULT 'efectivo',
+            nota TEXT DEFAULT '',
+            fecha TEXT DEFAULT (datetime('now','localtime')),
+            FOREIGN KEY (trabajo_id) REFERENCES trabajos(id)
+        )
+    `);
+
+    db.run(`
+        CREATE TABLE IF NOT EXISTS _counters (
+            key TEXT PRIMARY KEY,
+            value INTEGER NOT NULL
+        )
+    `);
+}
+
+// ── Migración (agregar columnas nuevas si faltan) ──
+
+function migrateDB() {
+    // Agregar columna foto a usuarios si no existe
+    try {
+        const cols = db.exec("PRAGMA table_info(usuarios)");
+        if (cols.length > 0) {
+            const colNames = cols[0].values.map(row => row[1]);
+            if (!colNames.includes('foto')) {
+                db.run("ALTER TABLE usuarios ADD COLUMN foto TEXT DEFAULT ''");
+            }
+            if (!colNames.includes('telefono')) {
+                db.run("ALTER TABLE usuarios ADD COLUMN telefono TEXT DEFAULT ''");
+            }
+            if (!colNames.includes('correo')) {
+                db.run("ALTER TABLE usuarios ADD COLUMN correo TEXT DEFAULT ''");
+            }
+            if (!colNames.includes('direccion')) {
+                db.run("ALTER TABLE usuarios ADD COLUMN direccion TEXT DEFAULT ''");
+            }
+            if (!colNames.includes('bio')) {
+                db.run("ALTER TABLE usuarios ADD COLUMN bio TEXT DEFAULT ''");
+            }
+        }
+    } catch (e) {
+        console.warn('Error en migración:', e);
+    }
+}
+
+// ── Seed Data ──
+
+function seedData() {
+    // Usuarios
+    db.run(`INSERT INTO usuarios (nombre, usuario, contrasena_hash, rol, activo, creado_en) VALUES (?, ?, ?, ?, ?, ?)`,
+        ['José Rodríguez', 'admin', 'admin123', 'admin', 1, '2025-01-01T08:00:00']);
+    db.run(`INSERT INTO usuarios (nombre, usuario, contrasena_hash, rol, activo, creado_en) VALUES (?, ?, ?, ?, ?, ?)`,
+        ['María García', 'maria', 'maria123', 'empleado', 1, '2025-02-15T09:00:00']);
+
+    // Categorías
+    db.run(`INSERT INTO categorias (nombre, descripcion) VALUES (?, ?)`, ['Útiles Escolares', 'Material escolar y de oficina']);
+    db.run(`INSERT INTO categorias (nombre, descripcion) VALUES (?, ?)`, ['Consumibles Impresora', 'Tinta, tóner, papel']);
+    db.run(`INSERT INTO categorias (nombre, descripcion) VALUES (?, ?)`, ['Servicios de Copias', 'Fotocopias, impresiones, encuadernados']);
+    db.run(`INSERT INTO categorias (nombre, descripcion) VALUES (?, ?)`, ['Decoración', 'Artículos y servicios de decoración']);
+
+    // Items (Productos)
+    const items = [
+        [1, 'Resma de Papel A4', 'Resma 500 hojas', 250.00, 180.00, 45, 10, 2, 1, '2025-01-10', '2025-01-10'],
+        [1, 'Cartucho Tinta Negro', 'HP 664 Negro', 850.00, 600.00, 8, 5, 2, 1, '2025-01-10', '2025-01-10'],
+        [1, 'Lápiz HB', 'Lápiz grafito HB', 15.00, 8.00, 120, 20, 1, 1, '2025-01-10', '2025-01-10'],
+        [1, 'Cuaderno 100 Hojas', 'Cuaderno rayado', 75.00, 45.00, 3, 10, 1, 1, '2025-01-10', '2025-01-10'],
+        [1, 'Cajas de Sardina', 'Caja de sardina', 200.00, 150.00, 25, 5, 1, 1, '2025-01-10', '2025-01-10'],
+        [1, 'Mayonesa', 'Mayonesa grande', 80.00, 55.00, 15, 5, 1, 1, '2025-01-10', '2025-01-10'],
+        [0, 'Fotocopia B/N', 'Copia blanco y negro carta', 5.00, 0, 0, 0, 3, 1, '2025-01-10', '2025-01-10'],
+        [0, 'Impresión a Color', 'Impresión carta a color', 25.00, 0, 0, 0, 3, 1, '2025-01-10', '2025-01-10'],
+        [0, 'Encuadernado', 'Encuadernado tipo espiral', 150.00, 0, 0, 0, 3, 1, '2025-01-10', '2025-01-10'],
+        [0, 'Laminado', 'Laminado carta', 100.00, 0, 0, 0, 3, 1, '2025-01-10', '2025-01-10'],
+    ];
+    items.forEach(item => {
+        db.run(`INSERT INTO items (es_producto, nombre, descripcion, precio_venta, costo, stock, stock_minimo, categoria_id, activo, creado_en, actualizado_en) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, item);
+    });
+
+    // Clientes
+    db.run(`INSERT INTO clientes (nombre, telefono, direccion, creado_en) VALUES (?, ?, ?, ?)`,
+        ['Jeff Martínez', '809-555-0001', 'Calle Duarte #15, Monte Cristi', '2025-01-15']);
+    db.run(`INSERT INTO clientes (nombre, telefono, direccion, creado_en) VALUES (?, ?, ?, ?)`,
+        ['Ana Pérez', '809-555-0002', 'Av. Mella #45', '2025-02-01']);
+    db.run(`INSERT INTO clientes (nombre, telefono, direccion, creado_en) VALUES (?, ?, ?, ?)`,
+        ['Carlos Rodríguez', '829-555-0003', 'Los Girasoles #8', '2025-02-10']);
+
+    // Facturas
+    db.run(`INSERT INTO facturas (numero_factura, cliente_id, usuario_id, subtotal, impuesto, total, metodo_pago, estado, nota, fecha) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ['PCI-4', 1, 1, 2915.25, 524.75, 3440.00, 'efectivo', 'pagada', '', '2025-02-20T10:30:00']);
+    db.run(`INSERT INTO facturas (numero_factura, cliente_id, usuario_id, subtotal, impuesto, total, metodo_pago, estado, nota, fecha) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        ['PCI-5', 2, 1, 500.00, 90.00, 590.00, 'tarjeta', 'pagada', '', '2025-02-25T09:00:00']);
+
+    // Detalle factura
+    db.run(`INSERT INTO detalle_factura (factura_id, item_id, descripcion, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?, ?)`,
+        [1, 5, 'Cajas de Sardina', 7, 213.06, 1188.44]);
+    db.run(`INSERT INTO detalle_factura (factura_id, item_id, descripcion, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?, ?)`,
+        [1, 6, 'Mayonesa', 8, 97.63, 543.37]);
+    db.run(`INSERT INTO detalle_factura (factura_id, item_id, descripcion, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?, ?)`,
+        [1, 5, 'Cajas de Sardina', 7, 213.06, 1188.44]);
+    db.run(`INSERT INTO detalle_factura (factura_id, item_id, descripcion, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?, ?)`,
+        [2, 1, 'Resma de Papel A4', 2, 250.00, 500.00]);
+
+    // Trabajos
+    db.run(`INSERT INTO trabajos (cliente_id, usuario_id, descripcion, precio_total, tiene_descuento, monto_descuento, total_abonado, saldo_pendiente, estado, fecha_recibido, fecha_entrega_estimada, fecha_entrega_real, nota) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [1, 1, 'Decoración de salón para fiesta de cumpleaños', 5000.00, 1, 500.00, 2000.00, 2500.00, 'en_proceso', '2025-02-18T08:00:00', '2025-02-28', null, 'Tema: unicornios']);
+    db.run(`INSERT INTO trabajos (cliente_id, usuario_id, descripcion, precio_total, tiene_descuento, monto_descuento, total_abonado, saldo_pendiente, estado, fecha_recibido, fecha_entrega_estimada, fecha_entrega_real, nota) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [3, 1, 'Impresión de 200 invitaciones', 3000.00, 0, 0, 3000.00, 0, 'entregado', '2025-02-10T09:00:00', '2025-02-15', '2025-02-14T16:00:00', '']);
+
+    // Abonos
+    db.run(`INSERT INTO abonos_trabajo (trabajo_id, monto, metodo_pago, nota, fecha) VALUES (?, ?, ?, ?, ?)`,
+        [1, 1000.00, 'efectivo', 'Primer abono', '2025-02-18T08:00:00']);
+    db.run(`INSERT INTO abonos_trabajo (trabajo_id, monto, metodo_pago, nota, fecha) VALUES (?, ?, ?, ?, ?)`,
+        [1, 1000.00, 'transferencia', 'Segundo abono', '2025-02-22T10:00:00']);
+    db.run(`INSERT INTO abonos_trabajo (trabajo_id, monto, metodo_pago, nota, fecha) VALUES (?, ?, ?, ?, ?)`,
+        [2, 3000.00, 'efectivo', 'Pago total', '2025-02-10T09:00:00']);
+
+    // Contador
+    db.run(`INSERT OR REPLACE INTO _counters (key, value) VALUES (?, ?)`, ['factura_num', 5]);
+}
+
+// ── Persistencia ──
+
+function persistDB() {
+    if (!db) return;
+    // Debounce: guardar 500ms después del último cambio
+    clearTimeout(_saveTimer);
+    _saveTimer = setTimeout(() => {
+        const data = db.export();
+        if (window.electronAPI && window.electronAPI.saveDatabase) {
+            window.electronAPI.saveDatabase(Array.from(data));
+        } else {
+            // Fallback: localStorage
+            try {
+                let binary = '';
+                for (let i = 0; i < data.length; i++) {
+                    binary += String.fromCharCode(data[i]);
+                }
+                localStorage.setItem('jrj_sqlite_db', btoa(binary));
+            } catch (e) {
+                console.warn('No se pudo guardar DB en localStorage (posiblemente muy grande):', e);
+            }
+        }
+    }, 500);
+}
+
+// ── Helpers SQL ──
+
+function queryAll(sql, params = []) {
+    const result = db.exec(sql, params);
+    if (!result.length) return [];
+    const cols = result[0].columns;
+    return result[0].values.map(row => {
+        const obj = {};
+        cols.forEach((col, i) => {
+            obj[col] = row[i];
+        });
+        // Convertir campos booleanos de SQLite (0/1) a JavaScript
+        if ('activo' in obj) obj.activo = !!obj.activo;
+        if ('es_producto' in obj) obj.es_producto = !!obj.es_producto;
+        if ('tiene_descuento' in obj) obj.tiene_descuento = !!obj.tiene_descuento;
+        return obj;
+    });
+}
+
+function queryOne(sql, params = []) {
+    const rows = queryAll(sql, params);
+    return rows.length > 0 ? rows[0] : null;
+}
+
+function runSql(sql, params = []) {
+    db.run(sql, params);
+    persistDB();
+}
+
+function getLastInsertId() {
+    const result = db.exec("SELECT last_insert_rowid()");
+    return result[0].values[0][0];
 }
 
 function now() {
@@ -87,99 +374,111 @@ function today() {
 // ── Generic CRUD ──
 
 export function getAll(entity) {
-    const db = getDB();
-    return db[entity] || [];
+    return queryAll(`SELECT * FROM ${entity}`);
 }
 
 export function getById(entity, id) {
-    return getAll(entity).find(item => item.id === Number(id));
+    return queryOne(`SELECT * FROM ${entity} WHERE id = ?`, [Number(id)]);
 }
 
 export function create(entity, data) {
-    const db = getDB();
-    if (!db[entity]) db[entity] = [];
-    const item = { ...data, id: nextId(db[entity]) };
-    db[entity].push(item);
-    saveDB(db);
-    return item;
+    const keys = Object.keys(data);
+    const values = Object.values(data);
+    const placeholders = keys.map(() => '?').join(', ');
+    runSql(`INSERT INTO ${entity} (${keys.join(', ')}) VALUES (${placeholders})`, values);
+    const newId = getLastInsertId();
+    persistDB();
+    return getById(entity, newId);
 }
 
 export function update(entity, id, data) {
-    const db = getDB();
-    const idx = db[entity].findIndex(item => item.id === Number(id));
-    if (idx === -1) return null;
-    db[entity][idx] = { ...db[entity][idx], ...data };
-    saveDB(db);
-    return db[entity][idx];
+    const keys = Object.keys(data);
+    const values = Object.values(data);
+    const setClause = keys.map(k => `${k} = ?`).join(', ');
+    runSql(`UPDATE ${entity} SET ${setClause} WHERE id = ?`, [...values, Number(id)]);
+    persistDB();
+    return getById(entity, id);
 }
 
 export function remove(entity, id) {
-    const db = getDB();
-    db[entity] = db[entity].filter(item => item.id !== Number(id));
-    saveDB(db);
+    runSql(`DELETE FROM ${entity} WHERE id = ?`, [Number(id)]);
+    persistDB();
 }
 
 // ── Auth ──
 
 export function authenticate(usuario, password) {
-    const users = getAll('usuarios');
-    const user = users.find(u => u.usuario === usuario && u.contrasena_hash === password);
+    const user = queryOne(`SELECT * FROM usuarios WHERE usuario = ? AND contrasena_hash = ?`, [usuario, password]);
     if (!user) return { success: false, error: 'Usuario o contraseña incorrectos' };
     if (!user.activo) return { success: false, error: 'Usuario desactivado. Contacte al administrador.' };
     return { success: true, user: { id: user.id, nombre: user.nombre, usuario: user.usuario, rol: user.rol } };
 }
 
+// ── Fotos de Perfil ──
+
+export function guardarFotoUsuario(id, base64Data) {
+    runSql(`UPDATE usuarios SET foto = ? WHERE id = ?`, [base64Data || '', Number(id)]);
+    persistDB();
+}
+
+export function obtenerFotoUsuario(id) {
+    const user = queryOne(`SELECT foto FROM usuarios WHERE id = ?`, [Number(id)]);
+    return user && user.foto ? user.foto : null;
+}
+
+export function eliminarFotoUsuario(id) {
+    runSql(`UPDATE usuarios SET foto = '' WHERE id = ?`, [Number(id)]);
+    persistDB();
+}
+
 // ── Facturación ──
 
 export function getNextFacturaNum() {
-    const db = getDB();
-    const num = db._counters.factura_num;
+    const counter = queryOne(`SELECT value FROM _counters WHERE key = 'factura_num'`);
+    const num = counter ? counter.value : 1;
     return `PCI-${num}`;
 }
 
 export function crearFactura(facturaData, detalles) {
-    const db = getDB();
-    const numero_factura = `PCI-${db._counters.factura_num}`;
-    db._counters.factura_num++;
+    const counter = queryOne(`SELECT value FROM _counters WHERE key = 'factura_num'`);
+    const num = counter ? counter.value : 1;
+    const numero_factura = `PCI-${num}`;
 
-    const factura = {
-        id: nextId(db.facturas),
+    // Incrementar contador
+    runSql(`UPDATE _counters SET value = value + 1 WHERE key = 'factura_num'`);
+
+    // Insertar factura
+    runSql(`INSERT INTO facturas (numero_factura, cliente_id, usuario_id, subtotal, impuesto, total, metodo_pago, estado, nota, fecha) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
         numero_factura,
-        cliente_id: facturaData.cliente_id || null,
-        usuario_id: facturaData.usuario_id,
-        subtotal: facturaData.subtotal,
-        impuesto: facturaData.impuesto,
-        total: facturaData.total,
-        metodo_pago: facturaData.metodo_pago || 'efectivo',
-        estado: 'pagada',
-        nota: facturaData.nota || '',
-        fecha: now(),
-    };
+        facturaData.cliente_id || null,
+        facturaData.usuario_id,
+        facturaData.subtotal,
+        facturaData.impuesto,
+        facturaData.total,
+        facturaData.metodo_pago || 'efectivo',
+        'pagada',
+        facturaData.nota || '',
+        now(),
+    ]);
 
-    db.facturas.push(factura);
+    const facturaId = getLastInsertId();
 
+    // Insertar detalles y descontar stock
     detalles.forEach(det => {
-        const detItem = {
-            id: nextId(db.detalle_factura),
-            factura_id: factura.id,
-            item_id: det.item_id,
-            descripcion: det.descripcion,
-            cantidad: det.cantidad,
-            precio_unitario: det.precio_unitario,
-            subtotal: det.subtotal,
-        };
-        db.detalle_factura.push(detItem);
+        runSql(`INSERT INTO detalle_factura (factura_id, item_id, descripcion, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?, ?)`, [
+            facturaId, det.item_id, det.descripcion, det.cantidad, det.precio_unitario, det.subtotal,
+        ]);
 
         // Descontar stock si es producto
-        const item = db.items.find(i => i.id === det.item_id);
+        const item = queryOne(`SELECT * FROM items WHERE id = ?`, [det.item_id]);
         if (item && item.es_producto) {
-            item.stock = Math.max(0, item.stock - det.cantidad);
-            item.actualizado_en = now();
+            const newStock = Math.max(0, item.stock - det.cantidad);
+            runSql(`UPDATE items SET stock = ?, actualizado_en = ? WHERE id = ?`, [newStock, now(), det.item_id]);
         }
     });
 
-    saveDB(db);
-    return factura;
+    persistDB();
+    return getById('facturas', facturaId);
 }
 
 // ── Trabajos ──
@@ -187,71 +486,92 @@ export function crearFactura(facturaData, detalles) {
 export function crearTrabajo(data) {
     const monto_descuento = data.tiene_descuento ? Number(data.monto_descuento) || 0 : 0;
     const saldo_pendiente = Number(data.precio_total) - monto_descuento;
-    const trabajo = create('trabajos', {
-        ...data,
+
+    runSql(`INSERT INTO trabajos (cliente_id, usuario_id, descripcion, precio_total, tiene_descuento, monto_descuento, total_abonado, saldo_pendiente, estado, fecha_recibido, fecha_entrega_estimada, fecha_entrega_real, nota) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
+        data.cliente_id,
+        data.usuario_id,
+        data.descripcion,
+        Number(data.precio_total),
+        data.tiene_descuento ? 1 : 0,
         monto_descuento,
-        total_abonado: 0,
+        0,
         saldo_pendiente,
-        estado: 'pendiente',
-        fecha_recibido: now(),
-        fecha_entrega_real: null,
-    });
-    return trabajo;
+        'pendiente',
+        now(),
+        data.fecha_entrega_estimada || null,
+        null,
+        data.nota || '',
+    ]);
+
+    const id = getLastInsertId();
+    persistDB();
+    return getById('trabajos', id);
 }
 
 export function registrarAbono(trabajo_id, monto, metodo_pago, nota) {
-    const db = getDB();
-    const trabajo = db.trabajos.find(t => t.id === Number(trabajo_id));
+    const trabajo = getById('trabajos', trabajo_id);
     if (!trabajo) return { error: 'Trabajo no encontrado' };
 
     const montoNum = Number(monto);
     if (montoNum <= 0) return { error: 'El monto debe ser mayor a 0' };
     if (montoNum > trabajo.saldo_pendiente) return { error: `El abono no puede exceder el saldo pendiente (RD$${trabajo.saldo_pendiente.toFixed(2)})` };
 
-    const abono = {
-        id: nextId(db.abonos_trabajo),
-        trabajo_id: Number(trabajo_id),
-        monto: montoNum,
-        metodo_pago: metodo_pago || 'efectivo',
-        nota: nota || '',
-        fecha: now(),
-    };
+    // Insertar abono
+    runSql(`INSERT INTO abonos_trabajo (trabajo_id, monto, metodo_pago, nota, fecha) VALUES (?, ?, ?, ?, ?)`, [
+        Number(trabajo_id), montoNum, metodo_pago || 'efectivo', nota || '', now(),
+    ]);
 
-    db.abonos_trabajo.push(abono);
+    const abonoId = getLastInsertId();
 
-    trabajo.total_abonado = (Number(trabajo.total_abonado) || 0) + montoNum;
-    trabajo.saldo_pendiente = Number(trabajo.precio_total) - Number(trabajo.monto_descuento) - trabajo.total_abonado;
+    // Actualizar trabajo
+    const nuevoAbonado = (Number(trabajo.total_abonado) || 0) + montoNum;
+    let nuevoPendiente = Number(trabajo.precio_total) - Number(trabajo.monto_descuento) - nuevoAbonado;
+    let nuevoEstado = trabajo.estado;
+    let fechaEntregaReal = trabajo.fecha_entrega_real;
 
-    if (trabajo.saldo_pendiente <= 0) {
-        trabajo.saldo_pendiente = 0;
-        trabajo.estado = 'entregado';
-        trabajo.fecha_entrega_real = now();
+    if (nuevoPendiente <= 0) {
+        nuevoPendiente = 0;
+        nuevoEstado = 'entregado';
+        fechaEntregaReal = now();
     }
 
-    saveDB(db);
-    return { success: true, abono, trabajo };
+    runSql(`UPDATE trabajos SET total_abonado = ?, saldo_pendiente = ?, estado = ?, fecha_entrega_real = ? WHERE id = ?`, [
+        nuevoAbonado, nuevoPendiente, nuevoEstado, fechaEntregaReal, Number(trabajo_id),
+    ]);
+
+    persistDB();
+
+    const abono = getById('abonos_trabajo', abonoId);
+    const trabajoActualizado = getById('trabajos', trabajo_id);
+    return { success: true, abono, trabajo: trabajoActualizado };
 }
 
 // ── Dashboard Stats ──
 
 export function getDashboardStats() {
-    const db = getDB();
     const todayStr = today();
 
-    const ventasHoy = db.facturas
-        .filter(f => f.fecha.startsWith(todayStr) && f.estado !== 'anulada')
-        .reduce((sum, f) => sum + Number(f.total), 0);
+    const ventasHoyResult = queryAll(
+        `SELECT COALESCE(SUM(total), 0) as total FROM facturas WHERE fecha LIKE ? AND estado != 'anulada'`,
+        [`${todayStr}%`]
+    );
+    const ventasHoy = ventasHoyResult[0]?.total || 0;
 
-    const trabajosPendientes = db.trabajos
-        .filter(t => t.estado === 'pendiente' || t.estado === 'en_proceso').length;
+    const trabajosPendientesResult = queryAll(
+        `SELECT COUNT(*) as count FROM trabajos WHERE estado IN ('pendiente', 'en_proceso')`
+    );
+    const trabajosPendientes = trabajosPendientesResult[0]?.count || 0;
 
-    const productosBajoStock = db.items
-        .filter(i => i.es_producto && i.activo && i.stock <= i.stock_minimo);
+    const productosBajoStock = queryAll(
+        `SELECT * FROM items WHERE es_producto = 1 AND activo = 1 AND stock <= stock_minimo`
+    );
 
     const mesActual = new Date().toISOString().slice(0, 7);
-    const ingresosMensuales = db.facturas
-        .filter(f => f.fecha.startsWith(mesActual) && f.estado !== 'anulada')
-        .reduce((sum, f) => sum + Number(f.total), 0);
+    const ingresosMensualesResult = queryAll(
+        `SELECT COALESCE(SUM(total), 0) as total FROM facturas WHERE fecha LIKE ? AND estado != 'anulada'`,
+        [`${mesActual}%`]
+    );
+    const ingresosMensuales = ingresosMensualesResult[0]?.total || 0;
 
     // Ventas últimos 7 días
     const ventasPorDia = [];
@@ -259,14 +579,22 @@ export function getDashboardStats() {
         const d = new Date();
         d.setDate(d.getDate() - i);
         const ds = d.toISOString().split('T')[0];
-        const total = db.facturas
-            .filter(f => f.fecha.startsWith(ds) && f.estado !== 'anulada')
-            .reduce((sum, f) => sum + Number(f.total), 0);
+        const result = queryAll(
+            `SELECT COALESCE(SUM(total), 0) as total FROM facturas WHERE fecha LIKE ? AND estado != 'anulada'`,
+            [`${ds}%`]
+        );
         ventasPorDia.push({
             dia: d.toLocaleDateString('es-DO', { weekday: 'short', day: 'numeric' }),
-            total,
+            total: result[0]?.total || 0,
         });
     }
+
+    const ultimosTrabajos = queryAll(
+        `SELECT * FROM trabajos WHERE estado != 'entregado' ORDER BY id DESC LIMIT 5`
+    );
+
+    const totalFacturasResult = queryAll(`SELECT COUNT(*) as count FROM facturas`);
+    const totalFacturas = totalFacturasResult[0]?.count || 0;
 
     return {
         ventasHoy,
@@ -274,8 +602,8 @@ export function getDashboardStats() {
         productosBajoStock,
         ingresosMensuales,
         ventasPorDia,
-        ultimosTrabajos: db.trabajos.filter(t => t.estado !== 'entregado').slice(-5).reverse(),
-        totalFacturas: db.facturas.length,
+        ultimosTrabajos,
+        totalFacturas,
     };
 }
 
@@ -303,6 +631,13 @@ export function formatDateTime(dateStr) {
 }
 
 export function resetDB() {
-    localStorage.removeItem(DB_KEY);
-    getDB();
+    if (window.electronAPI && window.electronAPI.deleteDatabase) {
+        window.electronAPI.deleteDatabase();
+    } else {
+        localStorage.removeItem('jrj_sqlite_db');
+    }
+    // Eliminar los datos viejos de localStorage también
+    localStorage.removeItem('jrj_sistema_db');
+    // Recargar la página para reinicializar
+    window.location.reload();
 }

@@ -1,6 +1,7 @@
 import { HashRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { initDatabase, isDBReady } from './data/store';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import Login from './pages/Login';
@@ -78,7 +79,91 @@ export const applyTheme = (themeStr) => {
     }
 };
 
+// ── Pantalla de carga mientras se inicializa SQLite ──
+function LoadingScreen() {
+    return (
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100vh',
+            background: 'var(--surface-main)',
+            color: 'var(--text-primary)',
+            gap: '16px',
+        }}>
+            <div style={{
+                width: 56, height: 56,
+                border: '3px solid var(--border-default)',
+                borderTopColor: 'var(--color-primary)',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite',
+            }} />
+            <p style={{ fontSize: '1rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
+                Inicializando base de datos...
+            </p>
+            <style>{`
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+            `}</style>
+        </div>
+    );
+}
+
+function ErrorScreen({ error, onRetry }) {
+    return (
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '100vh',
+            background: 'var(--surface-main)',
+            color: 'var(--text-primary)',
+            gap: '16px',
+            padding: '32px',
+            textAlign: 'center',
+        }}>
+            <div style={{ fontSize: '3rem' }}>⚠️</div>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Error al iniciar la base de datos</h2>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', maxWidth: 400 }}>
+                {error}
+            </p>
+            <button
+                onClick={onRetry}
+                style={{
+                    padding: '10px 24px',
+                    background: 'var(--color-primary)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                }}
+            >
+                Reintentar
+            </button>
+        </div>
+    );
+}
+
 export default function App() {
+    const [dbStatus, setDbStatus] = useState('loading'); // 'loading' | 'ready' | 'error'
+    const [dbError, setDbError] = useState('');
+
+    const initDB = async () => {
+        setDbStatus('loading');
+        try {
+            await initDatabase();
+            setDbStatus('ready');
+        } catch (e) {
+            console.error('Error inicializando DB:', e);
+            setDbError(e.message || 'Error desconocido');
+            setDbStatus('error');
+        }
+    };
+
     useEffect(() => {
         const storedTheme = localStorage.getItem('app_theme') || 'system';
         applyTheme(storedTheme);
@@ -94,8 +179,14 @@ export default function App() {
         const storedFontSize = localStorage.getItem('app_fontSize') || '16px';
         document.documentElement.style.fontSize = storedFontSize;
 
+        // Inicializar base de datos SQLite
+        initDB();
+
         return () => mediaQuery.removeEventListener('change', handleChange);
     }, []);
+
+    if (dbStatus === 'loading') return <LoadingScreen />;
+    if (dbStatus === 'error') return <ErrorScreen error={dbError} onRetry={initDB} />;
 
     return (
         <HashRouter>
