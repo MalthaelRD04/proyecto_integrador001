@@ -293,7 +293,7 @@ export default function TrabajoDetalle() {
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 'var(--space-4)' }}>
+            <div className="facturacion-layout">
                 {/* Left - Work details */}
                 <div>
                     <div className="card" style={{ marginBottom: 'var(--space-4)' }}>

@@ -133,7 +133,7 @@ export default function Facturacion() {
             {error && <div className="alert alert-danger"><AlertCircle size={16} />{error}</div>}
             {success && <div className="alert alert-success"><CheckCircle size={16} />{success}</div>}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 'var(--space-4)' }}>
+            <div className="facturacion-layout">
                 {/* Left - Invoice Form */}
                 <div>
                     <div className="card" style={{ marginBottom: 'var(--space-4)' }}>

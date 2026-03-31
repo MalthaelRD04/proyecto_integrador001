@@ -4,19 +4,69 @@
 // =============================================
 
 import initSqlJs from 'sql.js';
+import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
 
 let db = null;
 let _dbReady = false;
 let _saveTimer = null;
 
+// ── Helpers para IndexedDB (SQL Live Web) ──
+const IDB_NAME = 'jrj_sql_live';
+const IDB_STORE = 'sqlite_store';
+
+function getIndexedDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(IDB_NAME, 1);
+        request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(IDB_STORE)) {
+                db.createObjectStore(IDB_STORE);
+            }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function loadFromIndexedDB(key) {
+    try {
+        const db = await getIndexedDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE, 'readonly');
+            const store = tx.objectStore(IDB_STORE);
+            const req = store.get(key);
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    } catch (e) {
+        console.warn('IndexedDB no disponible para cargar:', e);
+        return null;
+    }
+}
+
+async function saveToIndexedDB(key, data) {
+    try {
+        const db = await getIndexedDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE, 'readwrite');
+            const store = tx.objectStore(IDB_STORE);
+            const req = store.put(data, key);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
+    } catch (e) {
+        console.warn('IndexedDB no disponible para guardar:', e);
+    }
+}
+
 // ── Inicialización ──
 
 export async function initDatabase() {
     const SQL = await initSqlJs({
-        locateFile: file => `${import.meta.env.BASE_URL}${file}`
+        locateFile: file => wasmUrl
     });
 
-    // Intentar cargar DB existente desde archivo (Electron) o localStorage (browser)
+    // Intentar cargar DB existente desde archivo (Electron) o IndexedDB (browser)
     let savedData = null;
 
     if (window.electronAPI && window.electronAPI.loadDatabase) {
@@ -26,17 +76,21 @@ export async function initDatabase() {
             console.warn('No se pudo cargar DB desde archivo:', e);
         }
     } else {
-        // Fallback: localStorage (para modo dev en navegador)
-        const lsData = localStorage.getItem('jrj_sqlite_db');
-        if (lsData) {
-            try {
-                const binary = atob(lsData);
-                savedData = new Uint8Array(binary.length);
-                for (let i = 0; i < binary.length; i++) {
-                    savedData[i] = binary.charCodeAt(i);
-                }
-            } catch (e) {
-                console.warn('No se pudo cargar DB desde localStorage:', e);
+        // Fallback: IndexedDB (Local SQL Live)
+        const idbData = await loadFromIndexedDB('jrj_sqlite_db');
+        if (idbData && idbData.length > 0) {
+            savedData = idbData;
+        } else {
+             // Fallback legacy (por si actualizan desde localStorage)
+            const lsData = localStorage.getItem('jrj_sqlite_db');
+            if (lsData) {
+                try {
+                    const binary = atob(lsData);
+                    savedData = new Uint8Array(binary.length);
+                    for (let i = 0; i < binary.length; i++) {
+                        savedData[i] = binary.charCodeAt(i);
+                    }
+                } catch (e) {}
             }
         }
     }
@@ -315,16 +369,8 @@ function persistDB() {
         if (window.electronAPI && window.electronAPI.saveDatabase) {
             window.electronAPI.saveDatabase(Array.from(data));
         } else {
-            // Fallback: localStorage
-            try {
-                let binary = '';
-                for (let i = 0; i < data.length; i++) {
-                    binary += String.fromCharCode(data[i]);
-                }
-                localStorage.setItem('jrj_sqlite_db', btoa(binary));
-            } catch (e) {
-                console.warn('No se pudo guardar DB en localStorage (posiblemente muy grande):', e);
-            }
+            // Fallback: IndexedDB (Live SQL Web)
+            saveToIndexedDB('jrj_sqlite_db', data);
         }
     }, 500);
 }
@@ -633,11 +679,12 @@ export function formatDateTime(dateStr) {
 export function resetDB() {
     if (window.electronAPI && window.electronAPI.deleteDatabase) {
         window.electronAPI.deleteDatabase();
+        window.location.reload();
     } else {
         localStorage.removeItem('jrj_sqlite_db');
+        localStorage.removeItem('jrj_sistema_db');
+        const req = indexedDB.deleteDatabase(IDB_NAME);
+        req.onsuccess = () => window.location.reload();
+        req.onerror = () => window.location.reload();
     }
-    // Eliminar los datos viejos de localStorage también
-    localStorage.removeItem('jrj_sistema_db');
-    // Recargar la página para reinicializar
-    window.location.reload();
 }

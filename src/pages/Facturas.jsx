@@ -71,7 +71,8 @@ export default function Facturas() {
                                             </span>
                                         </td>
                                         <td className="text-right font-mono font-bold">RD$ {formatMoney(f.total)}</td>
-                                        <td style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+                                        <td>
+                                            <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
                                             <button 
                                                 className="btn btn-sm btn-ghost text-success" 
                                                 style={{ color: '#25D366' }}
@@ -87,6 +88,7 @@ export default function Facturas() {
                                             <Link to={`/facturas/${f.id}`} className="btn btn-sm btn-ghost">
                                                 <Eye size={14} /> Ver
                                             </Link>
+                                            </div>
                                         </td>
                                     </tr>
                                 );

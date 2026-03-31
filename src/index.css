@@ -1212,3 +1212,23 @@ tbody tr:last-child td {
     padding: 0 !important;
   }
 }
+
+/* ── Custom Layouts ── */
+.dashboard-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.facturacion-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: var(--space-4);
+}
+
+@media (max-width: 960px) {
+  .dashboard-2col,
+  .facturacion-layout {
+    grid-template-columns: 1fr;
+  }
+}
