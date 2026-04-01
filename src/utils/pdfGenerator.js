@@ -196,10 +196,10 @@ export const generarPDFTrabajo = (trabajo, cliente, usuario, abonosList, action 
             window.open(url, '_blank');
         });
     } else if (action === 'view') {
-        html2pdf().set(options).from(container).outputPdf('bloburl').then((pdfUrl) => {
+        return html2pdf().set(options).from(container).outputPdf('bloburl').then((pdfUrl) => {
             window.open(pdfUrl, '_blank');
         });
     } else {
-        html2pdf().set(options).from(container).save();
+        return html2pdf().set(options).from(container).save();
     }
 };

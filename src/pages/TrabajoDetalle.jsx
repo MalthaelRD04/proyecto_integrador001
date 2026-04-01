@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getById, getAll, update, registrarAbono, formatMoney, formatDate, formatDateTime } from '../data/store';
+import { getById, getAll, update, registrarAbono, formatMoney, formatDate, formatDateTime, guardarTrabajoComoFactura } from '../data/store';
 import Modal from '../components/Modal';
-import { ArrowLeft, Plus, DollarSign, Calendar, User, AlertCircle, CheckCircle, Printer, MessageCircle } from 'lucide-react';
+import { ArrowLeft, Plus, DollarSign, Calendar, User, AlertCircle, CheckCircle, Printer, MessageCircle, Save, X, Send, FileText } from 'lucide-react';
 import { generarPDFTrabajo } from '../utils/pdfGenerator';
 
 export default function TrabajoDetalle() {
@@ -13,6 +13,9 @@ export default function TrabajoDetalle() {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [modalPrint, setModalPrint] = useState(false);
+    const [modalWhatsApp, setModalWhatsApp] = useState(false);
+    const [whatsAppStep, setWhatsAppStep] = useState('idle'); // idle | sending | sent | saving | saved
+    const [facturaGuardada, setFacturaGuardada] = useState(null);
 
     const trabajo = getById('trabajos', id);
     const abonos = getAll('abonos_trabajo').filter(a => a.trabajo_id === Number(id));
@@ -220,11 +223,65 @@ export default function TrabajoDetalle() {
     };
 
     const handleWhatsApp = () => {
+        setWhatsAppStep('idle');
+        setFacturaGuardada(null);
+        setModalWhatsApp(true);
+    };
+
+    const handleEnviarWhatsApp = () => {
         const t = getById('trabajos', id);
         const cli = getById('clientes', t.cliente_id);
         const usr = getById('usuarios', t.usuario_id);
         const abonosList = getAll('abonos_trabajo').filter(a => a.trabajo_id === Number(id));
-        generarPDFTrabajo(t, cli, usr, abonosList, 'download_and_whatsapp');
+
+        setWhatsAppStep('sending');
+
+        // Generar y descargar el PDF
+        generarPDFTrabajo(t, cli, usr, abonosList, 'download').then
+            ? generarPDFTrabajo(t, cli, usr, abonosList, 'download')
+            : null;
+
+        // Preparar mensaje de WhatsApp
+        const neto = Number(t.precio_total) - Number(t.monto_descuento || 0);
+        const mensaje = encodeURIComponent(
+            `Hola ${cli?.nombre || 'estimado cliente'}, le enviamos el resumen de su trabajo #${t.id} de JRJ Centro de Copias y Servicios:\n\n` +
+            `📋 Descripción: ${t.descripcion}\n` +
+            `💰 Total: RD$ ${formatMoney(t.precio_total)}` +
+            (t.tiene_descuento ? `\n🎁 Descuento: -RD$ ${formatMoney(t.monto_descuento)}` : '') +
+            `\n✅ Abonado: RD$ ${formatMoney(t.total_abonado)}` +
+            `\n⏳ Saldo: RD$ ${formatMoney(t.saldo_pendiente)}` +
+            `\n\nEl PDF de su factura ha sido adjuntado. Gracias por preferirnos. 🙏`
+        );
+
+        let telefono = cli?.telefono ? cli.telefono.replace(/\D/g, '') : '';
+        if (telefono && !telefono.startsWith('1') && !telefono.startsWith('52')) {
+            telefono = '1' + telefono;
+        }
+        const url = telefono
+            ? `https://wa.me/${telefono}?text=${mensaje}`
+            : `https://wa.me/?text=${mensaje}`;
+
+        setTimeout(() => {
+            window.open(url, '_blank');
+            setWhatsAppStep('sent');
+        }, 800);
+    };
+
+    const handleGuardarFactura = () => {
+        setWhatsAppStep('saving');
+        try {
+            const t = getById('trabajos', id);
+            const factura = guardarTrabajoComoFactura(t);
+            setFacturaGuardada(factura);
+            setWhatsAppStep('saved');
+            setSuccess('✅ Factura guardada en el sistema exitosamente');
+            setTimeout(() => setSuccess(''), 4000);
+            setRefresh(r => r + 1);
+        } catch (e) {
+            setError('Error al guardar la factura: ' + e.message);
+            setTimeout(() => setError(''), 4000);
+            setWhatsAppStep('sent');
+        }
     };
 
     const estadoBadge = (estado) => {
@@ -481,6 +538,158 @@ export default function TrabajoDetalle() {
                             📄 Recibo (Hoja Completa)
                         </button>
                     </div>
+                </Modal>
+            )}
+
+            {/* Modal WhatsApp */}
+            {modalWhatsApp && (
+                <Modal
+                    title="Enviar Factura por WhatsApp"
+                    onClose={() => { setModalWhatsApp(false); setWhatsAppStep('idle'); }}
+                    footer={
+                        whatsAppStep === 'idle' ? (
+                            <>
+                                <button className="btn btn-secondary" onClick={() => { setModalWhatsApp(false); setWhatsAppStep('idle'); }}>
+                                    <X size={14} /> Cancelar
+                                </button>
+                                <button className="btn btn-success" onClick={handleEnviarWhatsApp}>
+                                    <Send size={14} /> Enviar por WhatsApp
+                                </button>
+                            </>
+                        ) : whatsAppStep === 'sending' ? (
+                            <button className="btn btn-secondary" disabled>Enviando...</button>
+                        ) : whatsAppStep === 'sent' ? (
+                            <>
+                                <button className="btn btn-secondary" onClick={() => { setModalWhatsApp(false); setWhatsAppStep('idle'); }}>
+                                    <X size={14} /> Cerrar
+                                </button>
+                                <button className="btn btn-primary" onClick={handleGuardarFactura}>
+                                    <Save size={14} /> Sí, guardar en el sistema
+                                </button>
+                            </>
+                        ) : whatsAppStep === 'saving' ? (
+                            <button className="btn btn-secondary" disabled>Guardando...</button>
+                        ) : (
+                            <button className="btn btn-success" onClick={() => { setModalWhatsApp(false); setWhatsAppStep('idle'); }}>
+                                <CheckCircle size={14} /> Listo
+                            </button>
+                        )
+                    }
+                >
+                    {/* Paso: idle — confirmar envío */}
+                    {whatsAppStep === 'idle' && (
+                        <div>
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
+                                padding: 'var(--space-4)', background: '#f0fdf4',
+                                border: '1px solid #bbf7d0', borderRadius: 'var(--radius-md)',
+                                marginBottom: 'var(--space-4)'
+                            }}>
+                                <MessageCircle size={32} style={{ color: '#16a34a', flexShrink: 0 }} />
+                                <div>
+                                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Enviar factura del Trabajo #{currentTrabajo.id}</div>
+                                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                                        Se descargará el PDF y se abrirá WhatsApp con un mensaje pre-redactado para <strong>{cliente?.nombre || 'el cliente'}</strong>.
+                                    </div>
+                                </div>
+                            </div>
+                            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                                    <span>Cliente</span>
+                                    <strong>{cliente?.nombre || '—'}</strong>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                                    <span>Teléfono</span>
+                                    <strong>{cliente?.telefono || 'Sin teléfono'}</strong>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
+                                    <span>Saldo</span>
+                                    <strong style={{ color: currentTrabajo.saldo_pendiente > 0 ? 'var(--color-danger)' : 'var(--color-success)' }}>
+                                        RD$ {formatMoney(currentTrabajo.saldo_pendiente)}
+                                    </strong>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Paso: sending */}
+                    {whatsAppStep === 'sending' && (
+                        <div style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
+                            <div style={{ fontSize: 48, marginBottom: 'var(--space-4)' }}>📤</div>
+                            <div style={{ fontWeight: 600, marginBottom: 8 }}>Generando PDF y abriendo WhatsApp...</div>
+                            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Por favor espere un momento</div>
+                        </div>
+                    )}
+
+                    {/* Paso: sent — preguntar si guardar */}
+                    {whatsAppStep === 'sent' && (
+                        <div>
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
+                                padding: 'var(--space-4)', background: '#f0fdf4',
+                                border: '1px solid #bbf7d0', borderRadius: 'var(--radius-md)',
+                                marginBottom: 'var(--space-4)'
+                            }}>
+                                <CheckCircle size={28} style={{ color: '#16a34a', flexShrink: 0 }} />
+                                <div>
+                                    <div style={{ fontWeight: 600, marginBottom: 2 }}>✅ Mensaje enviado a WhatsApp</div>
+                                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>El PDF fue descargado y WhatsApp se abrió con el mensaje.</div>
+                                </div>
+                            </div>
+                            <div style={{
+                                padding: 'var(--space-4)', background: 'var(--slate-50)',
+                                border: '1px dashed var(--border-strong)', borderRadius: 'var(--radius-md)'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 8, fontWeight: 600 }}>
+                                    <FileText size={18} style={{ color: 'var(--color-primary)' }} />
+                                    ¿Desea guardar esta factura en el sistema?
+                                </div>
+                                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+                                    Se registrará una factura basada en este trabajo en el historial de facturas del sistema, permitiendo llevar un control completo de ingresos.
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Paso: saving */}
+                    {whatsAppStep === 'saving' && (
+                        <div style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
+                            <div style={{ fontSize: 48, marginBottom: 'var(--space-4)' }}>💾</div>
+                            <div style={{ fontWeight: 600, marginBottom: 8 }}>Guardando factura en el sistema...</div>
+                        </div>
+                    )}
+
+                    {/* Paso: saved */}
+                    {whatsAppStep === 'saved' && facturaGuardada && (
+                        <div>
+                            <div style={{
+                                display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
+                                padding: 'var(--space-4)', background: '#eff6ff',
+                                border: '1px solid #bfdbfe', borderRadius: 'var(--radius-md)',
+                                marginBottom: 'var(--space-4)'
+                            }}>
+                                <Save size={28} style={{ color: '#2563eb', flexShrink: 0 }} />
+                                <div>
+                                    <div style={{ fontWeight: 600, marginBottom: 2 }}>✅ Factura guardada exitosamente</div>
+                                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Ya puede consultarla en el módulo de Facturación.</div>
+                                </div>
+                            </div>
+                            <div style={{ fontSize: 'var(--text-sm)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Número de Factura</span>
+                                    <strong style={{ color: 'var(--color-primary)' }}>{facturaGuardada.numero_factura}</strong>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Cliente</span>
+                                    <strong>{cliente?.nombre || '—'}</strong>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Total</span>
+                                    <strong style={{ color: 'var(--color-success)' }}>RD$ {formatMoney(facturaGuardada.total)}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </Modal>
             )}
 

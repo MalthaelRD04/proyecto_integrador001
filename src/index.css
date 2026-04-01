@@ -158,6 +158,45 @@
   --slate-200: #475569;
 }
 
+/* ── Dark Mode: Form Inputs ── */
+:root[data-theme='dark'] .form-input,
+:root[data-theme='dark'] .form-select,
+:root[data-theme='dark'] .form-textarea {
+  background: var(--surface-input);
+  color: var(--text-primary);
+  border-color: var(--border-input);
+  color-scheme: dark;
+}
+
+:root[data-theme='dark'] .form-input:focus,
+:root[data-theme='dark'] .form-select:focus,
+:root[data-theme='dark'] .form-textarea:focus {
+  background: #1e3a52;
+  color: var(--text-primary);
+  border-color: var(--border-focus);
+  caret-color: var(--text-primary);
+}
+
+:root[data-theme='dark'] .form-input::placeholder,
+:root[data-theme='dark'] .form-textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+:root[data-theme='dark'] .form-select option {
+  background: #1e293b;
+  color: var(--text-primary);
+}
+
+:root[data-theme='dark'] .form-input:-webkit-autofill,
+:root[data-theme='dark'] .form-input:-webkit-autofill:hover,
+:root[data-theme='dark'] .form-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f8fafc;
+  -webkit-box-shadow: 0 0 0px 1000px #334155 inset;
+  box-shadow: 0 0 0px 1000px #334155 inset;
+  caret-color: #f8fafc;
+}
+
 
 /* ── Reset ── */
 *,
@@ -674,7 +713,8 @@ tbody tr:last-child td {
   outline: none;
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-  background: white;
+  background: var(--surface-elevated);
+  color: var(--text-primary);
 }
 
 .form-input::placeholder {

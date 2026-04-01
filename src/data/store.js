@@ -592,6 +592,52 @@ export function registrarAbono(trabajo_id, monto, metodo_pago, nota) {
     return { success: true, abono, trabajo: trabajoActualizado };
 }
 
+// ── Guardar Trabajo como Factura ──
+
+export function guardarTrabajoComoFactura(trabajo) {
+    // Obtener siguiente número de factura
+    const counter = queryOne(`SELECT value FROM _counters WHERE key = 'factura_num'`);
+    const num = counter ? counter.value : 1;
+    const numero_factura = `PCI-${num}`;
+
+    // Calcular valores
+    const neto = Number(trabajo.precio_total) - Number(trabajo.monto_descuento || 0);
+    const subtotal = neto;
+    const impuesto = 0; // Trabajos manuales sin ITBIS por defecto
+    const total = neto;
+
+    // Incrementar contador
+    runSql(`UPDATE _counters SET value = value + 1 WHERE key = 'factura_num'`);
+
+    // Insertar factura
+    runSql(
+        `INSERT INTO facturas (numero_factura, cliente_id, usuario_id, subtotal, impuesto, total, metodo_pago, estado, nota, fecha) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            numero_factura,
+            trabajo.cliente_id || null,
+            trabajo.usuario_id,
+            subtotal,
+            impuesto,
+            total,
+            'efectivo',
+            'pagada',
+            `Trabajo Manual #${trabajo.id}: ${trabajo.descripcion}`,
+            now(),
+        ]
+    );
+
+    const facturaId = getLastInsertId();
+
+    // Insertar un detalle representando el trabajo
+    runSql(
+        `INSERT INTO detalle_factura (factura_id, item_id, descripcion, cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?, ?)`,
+        [facturaId, 1, `Trabajo Manual #${trabajo.id}: ${trabajo.descripcion}`, 1, subtotal, subtotal]
+    );
+
+    persistDB();
+    return getById('facturas', facturaId);
+}
+
 // ── Dashboard Stats ──
 
 export function getDashboardStats() {
