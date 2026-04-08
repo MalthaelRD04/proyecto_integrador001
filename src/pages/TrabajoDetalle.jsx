@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getById, getAll, update, registrarAbono, formatMoney, formatDate, formatDateTime, guardarTrabajoComoFactura } from '../data/store';
 import Modal from '../components/Modal';
 import { ArrowLeft, Plus, DollarSign, Calendar, User, AlertCircle, CheckCircle, Printer, MessageCircle, Save, X, Send, FileText } from 'lucide-react';
 import { generarPDFTrabajo } from '../utils/pdfGenerator';
+import { open as shellOpen } from '@tauri-apps/plugin-shell';
 
 export default function TrabajoDetalle() {
     const { id } = useParams();
@@ -17,8 +18,29 @@ export default function TrabajoDetalle() {
     const [whatsAppStep, setWhatsAppStep] = useState('idle'); // idle | sending | sent | saving | saved
     const [facturaGuardada, setFacturaGuardada] = useState(null);
 
-    const trabajo = getById('trabajos', id);
-    const abonos = getAll('abonos_trabajo').filter(a => a.trabajo_id === Number(id));
+    const [trabajo, setTrabajo] = useState(null);
+    const [cliente, setCliente] = useState(null);
+    const [usuario, setUsuario] = useState(null);
+    const [abonosList, setAbonosList] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function load() {
+            setLoading(true);
+            const t = await getById('trabajos', id);
+            if (t) {
+                setTrabajo(t);
+                if (t.cliente_id) setCliente(await getById('clientes', t.cliente_id));
+                if (t.usuario_id) setUsuario(await getById('usuarios', t.usuario_id));
+                const allAbonos = await getAll('abonos_trabajo');
+                setAbonosList(allAbonos.filter(a => a.trabajo_id === Number(id)));
+            }
+            setLoading(false);
+        }
+        load();
+    }, [id, refresh]);
+
+    if (loading) return <div style={{ padding: 'var(--space-8)' }}>Cargando...</div>;
 
     if (!trabajo) {
         return (
@@ -31,17 +53,14 @@ export default function TrabajoDetalle() {
         );
     }
 
-    const cliente = getById('clientes', trabajo.cliente_id);
-    const usuario = getById('usuarios', trabajo.usuario_id);
-
-
+    const currentTrabajo = trabajo;
+    const currentAbonos = abonosList;
 
     const handlePrint = (formato) => {
         setModalPrint(false);
-        const t = getById('trabajos', id);
-        const cli = getById('clientes', t.cliente_id);
-        const usr = getById('usuarios', t.usuario_id);
-        const abonosList = getAll('abonos_trabajo').filter(a => a.trabajo_id === Number(id));
+        const t = currentTrabajo;
+        const cli = cliente;
+        const usr = usuario;
         const neto = Number(t.precio_total) - Number(t.monto_descuento);
 
         const printWindow = window.open('', '_blank');
@@ -229,10 +248,9 @@ export default function TrabajoDetalle() {
     };
 
     const handleEnviarWhatsApp = () => {
-        const t = getById('trabajos', id);
-        const cli = getById('clientes', t.cliente_id);
-        const usr = getById('usuarios', t.usuario_id);
-        const abonosList = getAll('abonos_trabajo').filter(a => a.trabajo_id === Number(id));
+        const t = currentTrabajo;
+        const cli = cliente;
+        const usr = usuario;
 
         setWhatsAppStep('sending');
 
@@ -250,7 +268,7 @@ export default function TrabajoDetalle() {
             (t.tiene_descuento ? `\n🎁 Descuento: -RD$ ${formatMoney(t.monto_descuento)}` : '') +
             `\n✅ Abonado: RD$ ${formatMoney(t.total_abonado)}` +
             `\n⏳ Saldo: RD$ ${formatMoney(t.saldo_pendiente)}` +
-            `\n\nEl PDF de su factura ha sido adjuntado. Gracias por preferirnos. 🙏`
+            `\n\nEl PDF de su comprobante ha sido adjuntado. Gracias por preferirnos. 🙏`
         );
 
         let telefono = cli?.telefono ? cli.telefono.replace(/\D/g, '') : '';
@@ -262,16 +280,15 @@ export default function TrabajoDetalle() {
             : `https://wa.me/?text=${mensaje}`;
 
         setTimeout(() => {
-            window.open(url, '_blank');
+            shellOpen(url).catch(err => window.open(url, '_blank'));
             setWhatsAppStep('sent');
         }, 800);
     };
 
-    const handleGuardarFactura = () => {
+    const handleGuardarFactura = async () => {
         setWhatsAppStep('saving');
         try {
-            const t = getById('trabajos', id);
-            const factura = guardarTrabajoComoFactura(t);
+            const factura = await guardarTrabajoComoFactura(currentTrabajo);
             setFacturaGuardada(factura);
             setWhatsAppStep('saved');
             setSuccess('✅ Factura guardada en el sistema exitosamente');
@@ -294,16 +311,16 @@ export default function TrabajoDetalle() {
         return map[estado] || estado;
     };
 
-    const cambiarEstado = (nuevoEstado) => {
-        update('trabajos', trabajo.id, {
+    const cambiarEstado = async (nuevoEstado) => {
+        await update('trabajos', currentTrabajo.id, {
             estado: nuevoEstado,
             ...(nuevoEstado === 'entregado' ? { fecha_entrega_real: new Date().toISOString() } : {}),
         });
         setRefresh(r => r + 1);
     };
 
-    const handleAbono = () => {
-        const result = registrarAbono(trabajo.id, abonoForm.monto, abonoForm.metodo_pago, abonoForm.nota);
+    const handleAbono = async () => {
+        const result = await registrarAbono(currentTrabajo.id, abonoForm.monto, abonoForm.metodo_pago, abonoForm.nota);
         if (result.error) {
             setError(result.error);
             setTimeout(() => setError(''), 3000);
@@ -315,10 +332,6 @@ export default function TrabajoDetalle() {
         setAbonoForm({ monto: '', metodo_pago: 'efectivo', nota: '' });
         setRefresh(r => r + 1);
     };
-
-    // Re-read after state changes
-    const currentTrabajo = getById('trabajos', id);
-    const currentAbonos = getAll('abonos_trabajo').filter(a => a.trabajo_id === Number(id));
 
     return (
         <div>
@@ -544,7 +557,7 @@ export default function TrabajoDetalle() {
             {/* Modal WhatsApp */}
             {modalWhatsApp && (
                 <Modal
-                    title="Enviar Factura por WhatsApp"
+                    title="Enviar Comprobante por WhatsApp"
                     onClose={() => { setModalWhatsApp(false); setWhatsAppStep('idle'); }}
                     footer={
                         whatsAppStep === 'idle' ? (
@@ -587,7 +600,7 @@ export default function TrabajoDetalle() {
                             }}>
                                 <MessageCircle size={32} style={{ color: '#16a34a', flexShrink: 0 }} />
                                 <div>
-                                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Enviar factura del Trabajo #{currentTrabajo.id}</div>
+                                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Enviar comprobante del Trabajo #{currentTrabajo.id}</div>
                                     <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
                                         Se descargará el PDF y se abrirá WhatsApp con un mensaje pre-redactado para <strong>{cliente?.nombre || 'el cliente'}</strong>.
                                     </div>
@@ -642,10 +655,10 @@ export default function TrabajoDetalle() {
                             }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 8, fontWeight: 600 }}>
                                     <FileText size={18} style={{ color: 'var(--color-primary)' }} />
-                                    ¿Desea guardar esta factura en el sistema?
+                                    ¿Desea crear una Factura formal con este trabajo?
                                 </div>
                                 <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                                    Se registrará una factura basada en este trabajo en el historial de facturas del sistema, permitiendo llevar un control completo de ingresos.
+                                    Se registrará una factura formal basada en este trabajo en el historial de facturas del sistema.
                                 </div>
                             </div>
                         </div>

@@ -1,8 +1,11 @@
 # Dependencias
 node_modules/
 dist/
-dist-electron/
-release/
+
+# Tauri
+src-tauri/target/
+src-tauri/WixTools/
+src-tauri/gen/
 
 # IDEs y Editores
 .vscode/

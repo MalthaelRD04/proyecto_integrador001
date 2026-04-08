@@ -9,17 +9,39 @@ export default function FacturaDetalle() {
     const { id } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
-    const factura = getById('facturas', id);
+    const [factura, setFactura] = useState(null);
+    const [detalles, setDetalles] = useState([]);
+    const [cliente, setCliente] = useState(null);
+    const [usuario, setUsuario] = useState(null);
+    const [loading, setLoading] = useState(true);
     const [modalPrint, setModalPrint] = useState(false);
 
     useEffect(() => {
-        if (location.state?.autoPrint) {
+        async function load() {
+            setLoading(true);
+            const f = await getById('facturas', id);
+            if (f) {
+                setFactura(f);
+                const allDetalles = await getAll('detalle_factura');
+                setDetalles(allDetalles.filter(d => d.factura_id === f.id));
+                if (f.cliente_id) setCliente(await getById('clientes', f.cliente_id));
+                if (f.usuario_id) setUsuario(await getById('usuarios', f.usuario_id));
+            }
+            setLoading(false);
+        }
+        load();
+    }, [id]);
+
+    useEffect(() => {
+        if (location.state?.autoPrint && factura) {
             navigate(location.pathname, { replace: true, state: {} });
             setTimeout(() => {
                 handlePrint('ticket');
             }, 300);
         }
-    }, [location, navigate]);
+    }, [location, navigate, factura]);
+
+    if (loading) return <div>Cargando...</div>;
 
     if (!factura) {
         return (
@@ -31,10 +53,6 @@ export default function FacturaDetalle() {
             </div>
         );
     }
-
-    const detalles = getAll('detalle_factura').filter(d => d.factura_id === factura.id);
-    const cliente = getById('clientes', factura.cliente_id);
-    const usuario = getById('usuarios', factura.usuario_id);
 
     const handlePrint = (formato) => {
         setModalPrint(false);

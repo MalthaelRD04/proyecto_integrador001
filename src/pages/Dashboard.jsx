@@ -6,9 +6,24 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 
 export default function Dashboard() {
     const [stats, setStats] = useState(null);
+    const [clientesMap, setClientesMap] = useState({});
 
     useEffect(() => {
-        setStats(getDashboardStats());
+        async function load() {
+            const s = await getDashboardStats();
+            setStats(s);
+            if (s.ultimosTrabajos && s.ultimosTrabajos.length > 0) {
+                const map = {};
+                for (const t of s.ultimosTrabajos) {
+                    if (t.cliente_id && !map[t.cliente_id]) {
+                        const c = await getById('clientes', t.cliente_id);
+                        map[t.cliente_id] = c;
+                    }
+                }
+                setClientesMap(map);
+            }
+        }
+        load();
     }, []);
 
     if (!stats) return null;
@@ -150,7 +165,7 @@ export default function Dashboard() {
                                 </thead>
                                 <tbody>
                                     {stats.ultimosTrabajos.map(t => {
-                                        const cliente = getById('clientes', t.cliente_id);
+                                        const cliente = clientesMap[t.cliente_id];
                                         return (
                                             <tr key={t.id}>
                                                 <td className="font-bold">{cliente?.nombre || '—'}</td>

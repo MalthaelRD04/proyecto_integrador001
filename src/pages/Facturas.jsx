@@ -6,16 +6,27 @@ import { generarPDFFactura } from '../utils/pdfGenerator';
 
 export default function Facturas() {
     const [facturas, setFacturas] = useState([]);
+    const [clientesMap, setClientesMap] = useState({});
     const [search, setSearch] = useState('');
 
     useEffect(() => {
-        setFacturas(getAll('facturas').reverse());
+        async function load() {
+            const facts = await getAll('facturas');
+            setFacturas(facts.reverse());
+
+            const clientList = await getAll('clientes');
+            const map = {};
+            for (const c of clientList) map[c.id] = c;
+            setClientesMap(map);
+        }
+        load();
     }, []);
 
-    const filtered = facturas.filter(f =>
-        f.numero_factura.toLowerCase().includes(search.toLowerCase()) ||
-        (getById('clientes', f.cliente_id)?.nombre || '').toLowerCase().includes(search.toLowerCase())
-    );
+    const filtered = facturas.filter(f => {
+        const cNombre = clientesMap[f.cliente_id]?.nombre || '';
+        return f.numero_factura.toLowerCase().includes(search.toLowerCase()) ||
+               cNombre.toLowerCase().includes(search.toLowerCase());
+    });
 
     const estadoClass = (e) => {
         if (e === 'pagada') return 'badge-green';
@@ -54,7 +65,7 @@ export default function Facturas() {
                         </thead>
                         <tbody>
                             {filtered.map(f => {
-                                const cliente = getById('clientes', f.cliente_id);
+                                const cliente = clientesMap[f.cliente_id];
                                 return (
                                     <tr key={f.id}>
                                         <td className="font-bold font-mono">{f.numero_factura}</td>
@@ -76,9 +87,10 @@ export default function Facturas() {
                                             <button 
                                                 className="btn btn-sm btn-ghost text-success" 
                                                 style={{ color: '#25D366' }}
-                                                onClick={() => {
-                                                    const detalles = getAll('detalle_factura').filter(d => d.factura_id === f.id);
-                                                    const usuario = getById('usuarios', f.usuario_id);
+                                                onClick={async () => {
+                                                    const getAllDetalles = await getAll('detalle_factura');
+                                                    const detalles = getAllDetalles.filter(d => d.factura_id === f.id);
+                                                    const usuario = await getById('usuarios', f.usuario_id);
                                                     generarPDFFactura(f, cliente, usuario, detalles, 'download_and_whatsapp');
                                                 }}
                                                 title="Enviar por WhatsApp"

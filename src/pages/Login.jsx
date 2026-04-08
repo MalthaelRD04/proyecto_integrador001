@@ -14,8 +14,8 @@ export default function Login() {
         setError('');
         setLoading(true);
 
-        setTimeout(() => {
-            const result = login(form.usuario, form.password);
+        setTimeout(async () => {
+            const result = await login(form.usuario, form.password);
             if (!result.success) {
                 setError(result.error);
             }

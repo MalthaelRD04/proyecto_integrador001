@@ -20,9 +20,13 @@ export default function Facturacion() {
     const [facturaNum, setFacturaNum] = useState('');
 
     useEffect(() => {
-        setClientes(getAll('clientes'));
-        setItems(getAll('items').filter(i => i.activo));
-        setFacturaNum(getNextFacturaNum());
+        async function load() {
+            setClientes(await getAll('clientes'));
+            const dbItems = await getAll('items');
+            setItems(dbItems.filter(i => i.activo));
+            setFacturaNum(await getNextFacturaNum());
+        }
+        load();
     }, []);
 
     const filteredItems = items.filter(i =>
@@ -91,14 +95,14 @@ export default function Facturacion() {
     const impuesto = subtotal * 0.18;
     const total = subtotal + impuesto;
 
-    const guardarFactura = () => {
+    const guardarFactura = async () => {
         if (detalles.length === 0) {
             setError('Agregue al menos un producto o servicio.');
             setTimeout(() => setError(''), 3000);
             return;
         }
 
-        const factura = crearFactura(
+        const factura = await crearFactura(
             {
                 cliente_id: clienteId ? Number(clienteId) : null,
                 usuario_id: user.id,
@@ -121,8 +125,9 @@ export default function Facturacion() {
         setDetalles([]);
         setClienteId('');
         setNota('');
-        setItems(getAll('items').filter(i => i.activo));
-        setFacturaNum(getNextFacturaNum());
+        const dbItems2 = await getAll('items');
+        setItems(dbItems2.filter(i => i.activo));
+        setFacturaNum(await getNextFacturaNum());
 
         // Redirect immediately and pass the autoPrint flag
         navigate(`/facturas/${factura.id}`, { state: { autoPrint: true } });

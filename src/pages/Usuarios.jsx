@@ -11,8 +11,8 @@ export default function Usuarios() {
     const [modal, setModal] = useState(null);
     const [form, setForm] = useState({ nombre: '', usuario: '', contrasena_hash: '', rol: 'empleado' });
 
-    const reload = () => setData(getAll('usuarios'));
-    useEffect(reload, []);
+    const reload = async () => setData(await getAll('usuarios'));
+    useEffect(() => { reload(); }, []);
 
     const filtered = data.filter(u =>
         u.nombre.toLowerCase().includes(search.toLowerCase()) ||
@@ -29,22 +29,22 @@ export default function Usuarios() {
         setModal(u.id);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!form.nombre || !form.usuario) return;
         if (modal === 'create') {
             if (!form.contrasena_hash) return;
-            create('usuarios', { ...form, activo: true, creado_en: new Date().toISOString() });
+            await create('usuarios', { ...form, activo: true, creado_en: new Date().toISOString() });
         } else {
             const updateData = { nombre: form.nombre, usuario: form.usuario, rol: form.rol };
             if (form.contrasena_hash) updateData.contrasena_hash = form.contrasena_hash;
-            update('usuarios', modal, updateData);
+            await update('usuarios', modal, updateData);
         }
         setModal(null);
         reload();
     };
 
-    const toggleActive = (u) => {
-        update('usuarios', u.id, { activo: !u.activo });
+    const toggleActive = async (u) => {
+        await update('usuarios', u.id, { activo: !u.activo });
         reload();
     };
 

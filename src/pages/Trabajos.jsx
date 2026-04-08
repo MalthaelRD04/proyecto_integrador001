@@ -18,11 +18,15 @@ export default function Trabajos() {
         tiene_descuento: false, monto_descuento: '', fecha_entrega_estimada: '', nota: ''
     });
 
-    const reload = () => { setData(getAll('trabajos').reverse()); setClientes(getAll('clientes')); };
-    useEffect(reload, []);
+    const reload = async () => {
+        const tr = await getAll('trabajos');
+        setData(tr.reverse());
+        setClientes(await getAll('clientes'));
+    };
+    useEffect(() => { reload(); }, []);
 
     const filtered = data.filter(t => {
-        const cliente = getById('clientes', t.cliente_id);
+        const cliente = clientes.find(c => c.id === t.cliente_id);
         const matchSearch = t.descripcion.toLowerCase().includes(search.toLowerCase()) ||
             (cliente?.nombre || '').toLowerCase().includes(search.toLowerCase());
         const matchEstado = filterEstado === 'all' || t.estado === filterEstado;
@@ -44,7 +48,7 @@ export default function Trabajos() {
         return map[estado] || estado;
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!form.cliente_id || !form.descripcion || !form.precio_total) return;
         const nuevoPrecio = Number(form.precio_total);
         const nuevoDescto = form.tiene_descuento ? Number(form.monto_descuento) || 0 : 0;
@@ -70,9 +74,9 @@ export default function Trabajos() {
                 payload.estado = 'en_proceso';
                 payload.fecha_entrega_real = null;
             }
-            update('trabajos', form.id, payload);
+            await update('trabajos', form.id, payload);
         } else {
-            crearTrabajo(payload);
+            await crearTrabajo(payload);
         }
         
         setModal(false);
@@ -90,11 +94,14 @@ export default function Trabajos() {
         setModal(true);
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (confirm('¿Estás seguro de eliminar permanentemente este trabajo y todos sus pagos registrados?')) {
-            const abonos = getAll('abonos_trabajo').filter(a => a.trabajo_id === id);
-            abonos.forEach(a => remove('abonos_trabajo', a.id));
-            remove('trabajos', id);
+            const allAbonos = await getAll('abonos_trabajo');
+            const abonos = allAbonos.filter(a => a.trabajo_id === id);
+            for (const a of abonos) {
+                await remove('abonos_trabajo', a.id);
+            }
+            await remove('trabajos', id);
             reload();
         }
     };
@@ -137,7 +144,7 @@ export default function Trabajos() {
                         </thead>
                         <tbody>
                             {filtered.map(t => {
-                                const cliente = getById('clientes', t.cliente_id);
+                                const cliente = clientes.find(c => c.id === t.cliente_id);
                                 return (
                                     <tr key={t.id}>
                                         <td className="font-bold">{cliente?.nombre || '—'}</td>
@@ -156,9 +163,10 @@ export default function Trabajos() {
                                                 <button 
                                                     className="btn btn-icon btn-sm btn-ghost text-success" 
                                                     style={{ color: '#25D366' }}
-                                                    onClick={() => {
-                                                        const usr = getById('usuarios', t.usuario_id);
-                                                        const abonosList = getAll('abonos_trabajo').filter(a => a.trabajo_id === t.id);
+                                                    onClick={async () => {
+                                                        const usr = await getById('usuarios', t.usuario_id);
+                                                        const allAbonos = await getAll('abonos_trabajo');
+                                                        const abonosList = allAbonos.filter(a => a.trabajo_id === t.id);
                                                         generarPDFTrabajo(t, cliente, usr, abonosList, 'download_and_whatsapp');
                                                     }}
                                                     title="WhatsApp con PDF"

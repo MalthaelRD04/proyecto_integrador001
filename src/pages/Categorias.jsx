@@ -5,12 +5,23 @@ import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
 
 export default function Categorias() {
     const [data, setData] = useState([]);
+    const [itemsMap, setItemsMap] = useState({});
     const [search, setSearch] = useState('');
     const [modal, setModal] = useState(null);
     const [form, setForm] = useState({ nombre: '', descripcion: '' });
 
-    const reload = () => setData(getAll('categorias'));
-    useEffect(reload, []);
+    const reload = async () => {
+        const categorias = await getAll('categorias');
+        const items = await getAll('items');
+        
+        const pMap = {};
+        for (const c of categorias) {
+            pMap[c.id] = items.filter(i => i.categoria_id === c.id).length;
+        }
+        setItemsMap(pMap);
+        setData(categorias);
+    };
+    useEffect(() => { reload(); }, []);
 
     const filtered = data.filter(c =>
         c.nombre.toLowerCase().includes(search.toLowerCase())
@@ -26,25 +37,25 @@ export default function Categorias() {
         setModal(c.id);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!form.nombre) return;
         if (modal === 'create') {
-            create('categorias', form);
+            await create('categorias', form);
         } else {
-            update('categorias', modal, form);
+            await update('categorias', modal, form);
         }
         setModal(null);
         reload();
     };
 
-    const handleDelete = (id) => {
-        const items = getAll('items').filter(i => i.categoria_id === id);
+    const handleDelete = async (id) => {
+        const items = (await getAll('items')).filter(i => i.categoria_id === id);
         if (items.length > 0) {
             alert(`No se puede eliminar. Hay ${items.length} producto(s) usando esta categoría.`);
             return;
         }
         if (confirm('¿Eliminar esta categoría?')) {
-            remove('categorias', id);
+            await remove('categorias', id);
             reload();
         }
     };
@@ -76,7 +87,7 @@ export default function Categorias() {
                         </thead>
                         <tbody>
                             {filtered.map(c => {
-                                const count = getAll('items').filter(i => i.categoria_id === c.id).length;
+                                const count = itemsMap[c.id] || 0;
                                 return (
                                     <tr key={c.id}>
                                         <td className="font-bold">{c.nombre}</td>

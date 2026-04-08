@@ -38,22 +38,25 @@ export default function PerfilUsuario() {
     const [showPass, setShowPass] = useState({ actual: false, nueva: false, confirmar: false });
 
     useEffect(() => {
-        const u = getById('usuarios', id);
-        if (!u) { navigate('/usuarios'); return; }
-        setUsuario(u);
-        setFormPersonal({
-            nombre: u.nombre || '',
-            usuario: u.usuario || '',
-            telefono: u.telefono || '',
-            correo: u.correo || '',
-            direccion: u.direccion || '',
-            bio: u.bio || '',
-        });
-        const savedFoto = obtenerFotoUsuario(u.id);
-        if (savedFoto) {
-            setFotoGuardada(savedFoto);
-            setFotoPreview(savedFoto);
+        async function load() {
+            const u = await getById('usuarios', id);
+            if (!u) { navigate('/usuarios'); return; }
+            setUsuario(u);
+            setFormPersonal({
+                nombre: u.nombre || '',
+                usuario: u.usuario || '',
+                telefono: u.telefono || '',
+                correo: u.correo || '',
+                direccion: u.direccion || '',
+                bio: u.bio || '',
+            });
+            const savedFoto = obtenerFotoUsuario(u.id);
+            if (savedFoto) {
+                setFotoGuardada(savedFoto);
+                setFotoPreview(savedFoto);
+            }
         }
+        load();
     }, [id, navigate]);
 
     const showToast = (msg, type = 'success') => {
@@ -99,12 +102,12 @@ export default function PerfilUsuario() {
     };
 
     // ── Guardar datos personales ──
-    const handleGuardarPersonal = () => {
+    const handleGuardarPersonal = async () => {
         if (!formPersonal.nombre.trim() || !formPersonal.usuario.trim()) {
             showToast('Nombre y usuario son obligatorios.', 'error');
             return;
         }
-        update('usuarios', Number(id), {
+        await update('usuarios', Number(id), {
             nombre: formPersonal.nombre.trim(),
             usuario: formPersonal.usuario.trim(),
             telefono: formPersonal.telefono.trim(),
@@ -116,12 +119,12 @@ export default function PerfilUsuario() {
     };
 
     // ── Cambiar contraseña ──
-    const handleGuardarPassword = () => {
+    const handleGuardarPassword = async () => {
         if (!formPassword.actual) {
             showToast('Ingresa tu contraseña actual.', 'error');
             return;
         }
-        const u = getById('usuarios', id);
+        const u = await getById('usuarios', id);
         if (u.contrasena_hash !== formPassword.actual) {
             showToast('La contraseña actual es incorrecta.', 'error');
             return;
@@ -134,7 +137,7 @@ export default function PerfilUsuario() {
             showToast('Las contraseñas nuevas no coinciden.', 'error');
             return;
         }
-        update('usuarios', Number(id), { contrasena_hash: formPassword.nueva });
+        await update('usuarios', Number(id), { contrasena_hash: formPassword.nueva });
         setFormPassword({ actual: '', nueva: '', confirmar: '' });
         showToast('Contraseña actualizada correctamente.');
     };

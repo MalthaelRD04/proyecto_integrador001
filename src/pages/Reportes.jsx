@@ -11,9 +11,28 @@ export default function Reportes() {
     });
     const [fechaHasta, setFechaHasta] = useState(() => new Date().toISOString().split('T')[0]);
 
-    const facturas = getAll('facturas');
-    const items = getAll('items');
-    const trabajos = getAll('trabajos');
+    const [facturas, setFacturas] = useState([]);
+    const [items, setItems] = useState([]);
+    const [trabajos, setTrabajos] = useState([]);
+    const [categoriasMap, setCategoriasMap] = useState({});
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        async function load() {
+            setLoading(true);
+            setFacturas(await getAll('facturas'));
+            setItems(await getAll('items'));
+            setTrabajos(await getAll('trabajos'));
+
+            const cats = await getAll('categorias');
+            const cMap = {};
+            for (const c of cats) cMap[c.id] = c;
+            setCategoriasMap(cMap);
+
+            setLoading(false);
+        }
+        load();
+    }, []);
 
     // Ventas filtradas
     const ventasFiltradas = facturas.filter(f => {
@@ -64,6 +83,8 @@ export default function Reportes() {
         gap: 'var(--space-2)',
         transition: 'all var(--transition-fast)',
     });
+
+    if (loading) return <div style={{ padding: 'var(--space-8)' }}>Cargando reportes...</div>;
 
     return (
         <div>
@@ -154,7 +175,7 @@ export default function Reportes() {
                                 {productosBajoStock.map(p => (
                                     <tr key={p.id}>
                                         <td className="font-bold">{p.nombre}</td>
-                                        <td className="text-muted">{getById('categorias', p.categoria_id)?.nombre || '—'}</td>
+                                        <td className="text-muted">{categoriasMap[p.categoria_id]?.nombre || '—'}</td>
                                         <td className="text-right">
                                             <span className={`badge ${p.stock === 0 ? 'badge-red' : 'badge-orange'}`}>{p.stock}</span>
                                         </td>

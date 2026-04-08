@@ -3,28 +3,28 @@
     "private": true,
     "version": "1.0.0",
     "type": "module",
-    "main": "dist-electron/main.js",
     "scripts": {
         "dev": "vite",
         "build": "vite build",
         "preview": "vite preview",
-        "build:electron": "vite build && electron-builder"
+        "tauri": "tauri",
+        "tauri:dev": "tauri dev",
+        "tauri:build": "tauri build"
     },
     "dependencies": {
+        "@tauri-apps/api": "^2.10.1",
+        "@tauri-apps/plugin-shell": "^2.3.5",
+        "@tauri-apps/plugin-sql": "^2.4.0",
         "html2pdf.js": "^0.14.0",
         "lucide-react": "^0.469.0",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
         "react-router-dom": "^7.1.0",
-        "recharts": "^2.15.0",
-        "sql.js": "^1.14.1"
+        "recharts": "^2.15.0"
     },
     "devDependencies": {
+        "@tauri-apps/cli": "^2.10.1",
         "@vitejs/plugin-react": "^4.3.0",
-        "electron": "^41.1.0",
-        "electron-builder": "^26.8.1",
-        "vite": "^6.4.1",
-        "vite-plugin-electron": "^0.29.1",
-        "vite-plugin-electron-renderer": "^0.14.6"
+        "vite": "^6.4.1"
     }
 }

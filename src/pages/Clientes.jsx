@@ -9,8 +9,8 @@ export default function Clientes() {
     const [modal, setModal] = useState(null);
     const [form, setForm] = useState({ nombre: '', telefono: '', direccion: '' });
 
-    const reload = () => setData(getAll('clientes'));
-    useEffect(reload, []);
+    const reload = async () => setData(await getAll('clientes'));
+    useEffect(() => { reload(); }, []);
 
     const filtered = data.filter(c =>
         c.nombre.toLowerCase().includes(search.toLowerCase()) ||
@@ -27,26 +27,30 @@ export default function Clientes() {
         setModal(c.id);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!form.nombre) return;
         if (modal === 'create') {
-            create('clientes', { ...form, creado_en: new Date().toISOString() });
+            await create('clientes', { ...form, creado_en: new Date().toISOString() });
         } else {
-            update('clientes', modal, form);
+            await update('clientes', modal, form);
         }
         setModal(null);
         reload();
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (confirm('¿Eliminar este cliente y todos sus trabajos asociados permanentemente?')) {
-            const trabajosCliente = getAll('trabajos').filter(t => t.cliente_id === id);
-            trabajosCliente.forEach(t => {
-                const abonos = getAll('abonos_trabajo').filter(a => a.trabajo_id === t.id);
-                abonos.forEach(a => remove('abonos_trabajo', a.id));
-                remove('trabajos', t.id);
-            });
-            remove('clientes', id);
+            const trabajos = await getAll('trabajos');
+            const trabajosCliente = trabajos.filter(t => t.cliente_id === id);
+            for (const t of trabajosCliente) {
+                const abonosTodo = await getAll('abonos_trabajo');
+                const abonos = abonosTodo.filter(a => a.trabajo_id === t.id);
+                for (const a of abonos) {
+                    await remove('abonos_trabajo', a.id);
+                }
+                await remove('trabajos', t.id);
+            }
+            await remove('clientes', id);
             reload();
         }
     };

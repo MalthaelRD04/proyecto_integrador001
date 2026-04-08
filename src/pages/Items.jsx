@@ -15,8 +15,8 @@ export default function Items() {
         costo: '', stock: '', stock_minimo: '5', categoria_id: '', activo: true
     });
 
-    const reload = () => { setData(getAll('items')); setCategorias(getAll('categorias')); };
-    useEffect(reload, []);
+    const reload = async () => { setData(await getAll('items')); setCategorias(await getAll('categorias')); };
+    useEffect(() => { reload(); }, []);
 
     const filtered = data.filter(i => {
         if (!i.nombre.toLowerCase().includes(search.toLowerCase())) return false;
@@ -46,7 +46,7 @@ export default function Items() {
         setModal(item.id);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!form.nombre || !form.precio_venta) return;
         const saveData = {
             ...form,
@@ -58,22 +58,22 @@ export default function Items() {
             actualizado_en: new Date().toISOString(),
         };
         if (modal === 'create') {
-            create('items', { ...saveData, creado_en: new Date().toISOString() });
+            await create('items', { ...saveData, creado_en: new Date().toISOString() });
         } else {
-            update('items', modal, saveData);
+            await update('items', modal, saveData);
         }
         setModal(null);
         reload();
     };
 
-    const handleDelete = (id) => {
-        const detalles = getAll('detalle_factura').filter(d => d.item_id === id);
+    const handleDelete = async (id) => {
+        const detalles = (await getAll('detalle_factura')).filter(d => d.item_id === id);
         if (detalles.length > 0) {
             alert('No se puede eliminar. Este ítem tiene facturas asociadas.');
             return;
         }
         if (confirm('¿Eliminar este ítem?')) {
-            remove('items', id);
+            await remove('items', id);
             reload();
         }
     };

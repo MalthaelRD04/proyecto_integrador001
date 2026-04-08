@@ -9,8 +9,8 @@ export function AuthProvider({ children }) {
         return saved ? JSON.parse(saved) : null;
     });
 
-    const login = (usuario, password) => {
-        const result = authenticate(usuario, password);
+    const login = async (usuario, password) => {
+        const result = await authenticate(usuario, password);
         if (result.success) {
             setUser(result.user);
             localStorage.setItem('jrj_session', JSON.stringify(result.user));

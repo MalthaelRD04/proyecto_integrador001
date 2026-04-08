@@ -1,0 +1,32 @@
+    Updating crates.io index
+     Locking 12 packages to latest compatible versions
+      Adding encoding_rs v0.8.35
+      Adding errno v0.3.14
+      Adding is-docker v0.2.0
+      Adding is-wsl v0.4.0
+      Adding open v5.3.3
+      Adding os_pipe v1.2.3
+      Adding pathdiff v0.2.3
+      Adding shared_child v1.1.1
+      Adding sigchld v0.2.4
+      Adding signal-hook v0.3.18
+      Adding signal-hook-registry v1.4.8
+      Adding tauri-plugin-shell v2.3.5
+ Downloading crates ...
+  Downloaded os_pipe v1.2.3
+  Downloaded open v5.3.3
+  Downloaded shared_child v1.1.1
+  Downloaded tauri-plugin-shell v2.3.5
+  Downloaded encoding_rs v0.8.35
+    Checking windows-sys v0.60.2
+    Checking open v5.3.3
+    Checking encoding_rs v0.8.35
+   Compiling tauri-plugin-shell v2.3.5
+    Checking os_pipe v1.2.3
+    Checking muda v0.17.2
+    Checking shared_child v1.1.1
+   Compiling jrj-sistema v1.0.0 (C:\Users\jaffm\Desktop\proyecto_integrador001\src-tauri)
+    Checking tauri v2.10.3
+    Checking tauri-plugin-log v2.8.0
+    Checking tauri-plugin-sql v2.4.0
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 25.39s

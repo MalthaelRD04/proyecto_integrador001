@@ -1,5 +1,6 @@
 import { formatMoney, formatDateTime } from '../data/store';
 import html2pdf from 'html2pdf.js';
+import { open as shellOpen } from '@tauri-apps/plugin-shell';
 
 export const generarPDFFactura = (factura, cliente, usuario, detalles, action = 'download') => {
     // Usaremos el diseño de la hoja completa (recibo)
@@ -92,14 +93,16 @@ export const generarPDFFactura = (factura, cliente, usuario, detalles, action = 
     };
 
     if (action === 'download_and_whatsapp') {
-        html2pdf().set(options).from(container).save().then(() => {
+        html2pdf().set(options).from(container).save();
+        setTimeout(() => {
             let telefono = cliente?.telefono ? cliente.telefono.replace(/\D/g, '') : '';
             if (telefono && !telefono.startsWith('1') && !telefono.startsWith('52')) {
                 telefono = '1' + telefono;
             }
-            let url = telefono ? `https://wa.me/${telefono}` : `https://wa.me/`;
-            window.open(url, '_blank');
-        });
+            let mensaje = encodeURIComponent(`Hola ${cliente?.nombre || 'cliente'}, le adjunto el resumen de su factura #${factura.numero_factura} por un total de RD$ ${formatMoney(factura.total)}.\n\nGracias por preferir a JRJ Centro de Copias y Servicios. ✨`);
+            let url = telefono ? `https://wa.me/${telefono}?text=${mensaje}` : `https://wa.me/?text=${mensaje}`;
+            shellOpen(url).catch(err => window.open(url, '_blank'));
+        }, 800);
     } else if (action === 'view') {
         html2pdf().set(options).from(container).outputPdf('bloburl').then((pdfUrl) => {
             window.open(pdfUrl, '_blank');
@@ -187,14 +190,16 @@ export const generarPDFTrabajo = (trabajo, cliente, usuario, abonosList, action 
     };
 
     if (action === 'download_and_whatsapp') {
-        html2pdf().set(options).from(container).save().then(() => {
+        html2pdf().set(options).from(container).save();
+        setTimeout(() => {
             let telefono = cliente?.telefono ? cliente.telefono.replace(/\D/g, '') : '';
             if (telefono && !telefono.startsWith('1') && !telefono.startsWith('52')) {
                 telefono = '1' + telefono;
             }
-            let url = telefono ? `https://wa.me/${telefono}` : `https://wa.me/`;
-            window.open(url, '_blank');
-        });
+            let mensaje = encodeURIComponent(`Hola ${cliente?.nombre || 'cliente'}, le adjunto el comprobante de su trabajo #${trabajo.id} (Saldo pendiente: RD$ ${formatMoney(trabajo.saldo_pendiente)}).\n\nGracias por preferir a JRJ Centro de Copias y Servicios. ✨`);
+            let url = telefono ? `https://wa.me/${telefono}?text=${mensaje}` : `https://wa.me/?text=${mensaje}`;
+            shellOpen(url).catch(err => window.open(url, '_blank'));
+        }, 800);
     } else if (action === 'view') {
         return html2pdf().set(options).from(container).outputPdf('bloburl').then((pdfUrl) => {
             window.open(pdfUrl, '_blank');
