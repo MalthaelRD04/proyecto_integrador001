@@ -93,16 +93,21 @@ export const generarPDFFactura = (factura, cliente, usuario, detalles, action = 
     };
 
     if (action === 'download_and_whatsapp') {
-        html2pdf().set(options).from(container).save();
         setTimeout(() => {
             let telefono = cliente?.telefono ? cliente.telefono.replace(/\D/g, '') : '';
             if (telefono && !telefono.startsWith('1') && !telefono.startsWith('52')) {
                 telefono = '1' + telefono;
             }
-            let mensaje = encodeURIComponent(`Hola ${cliente?.nombre || 'cliente'}, le adjunto el resumen de su factura #${factura.numero_factura} por un total de RD$ ${formatMoney(factura.total)}.\n\nGracias por preferir a JRJ Centro de Copias y Servicios. ✨`);
+            let detallesTexto = detalles.map(d => `• ${d.cantidad}x ${d.descripcion} - RD$ ${formatMoney(d.subtotal)}`).join('\n');
+            let mensaje = encodeURIComponent(
+                `Hola ${cliente?.nombre || 'cliente'}, le compartimos los detalles de su factura #${factura.numero_factura}:\n\n` +
+                `${detallesTexto}\n\n` +
+                `💰 Total: RD$ ${formatMoney(factura.total)}\n\n` +
+                `Gracias por preferir a JRJ Centro de Copias y Servicios. ✨`
+            );
             let url = telefono ? `https://wa.me/${telefono}?text=${mensaje}` : `https://wa.me/?text=${mensaje}`;
             shellOpen(url).catch(err => window.open(url, '_blank'));
-        }, 800);
+        }, 300);
     } else if (action === 'view') {
         html2pdf().set(options).from(container).outputPdf('bloburl').then((pdfUrl) => {
             window.open(pdfUrl, '_blank');
@@ -190,16 +195,23 @@ export const generarPDFTrabajo = (trabajo, cliente, usuario, abonosList, action 
     };
 
     if (action === 'download_and_whatsapp') {
-        html2pdf().set(options).from(container).save();
         setTimeout(() => {
             let telefono = cliente?.telefono ? cliente.telefono.replace(/\D/g, '') : '';
             if (telefono && !telefono.startsWith('1') && !telefono.startsWith('52')) {
                 telefono = '1' + telefono;
             }
-            let mensaje = encodeURIComponent(`Hola ${cliente?.nombre || 'cliente'}, le adjunto el comprobante de su trabajo #${trabajo.id} (Saldo pendiente: RD$ ${formatMoney(trabajo.saldo_pendiente)}).\n\nGracias por preferir a JRJ Centro de Copias y Servicios. ✨`);
+            let mensaje = encodeURIComponent(
+                `Hola ${cliente?.nombre || 'cliente'}, le compartimos el resumen de su trabajo #${trabajo.id}:\n\n` +
+                `📋 Descripción: ${trabajo.descripcion}\n` +
+                `💰 Total: RD$ ${formatMoney(trabajo.precio_total)}` +
+                (trabajo.tiene_descuento ? `\n🎁 Descuento: -RD$ ${formatMoney(trabajo.monto_descuento)}` : '') +
+                `\n✅ Abonado: RD$ ${formatMoney(trabajo.total_abonado)}` +
+                `\n⏳ Saldo: RD$ ${formatMoney(trabajo.saldo_pendiente)}` +
+                `\n\nGracias por preferir a JRJ Centro de Copias y Servicios. ✨`
+            );
             let url = telefono ? `https://wa.me/${telefono}?text=${mensaje}` : `https://wa.me/?text=${mensaje}`;
             shellOpen(url).catch(err => window.open(url, '_blank'));
-        }, 800);
+        }, 300);
     } else if (action === 'view') {
         return html2pdf().set(options).from(container).outputPdf('bloburl').then((pdfUrl) => {
             window.open(pdfUrl, '_blank');

@@ -254,11 +254,6 @@ export default function TrabajoDetalle() {
 
         setWhatsAppStep('sending');
 
-        // Generar y descargar el PDF
-        generarPDFTrabajo(t, cli, usr, abonosList, 'download').then
-            ? generarPDFTrabajo(t, cli, usr, abonosList, 'download')
-            : null;
-
         // Preparar mensaje de WhatsApp
         const neto = Number(t.precio_total) - Number(t.monto_descuento || 0);
         const mensaje = encodeURIComponent(
@@ -268,7 +263,7 @@ export default function TrabajoDetalle() {
             (t.tiene_descuento ? `\n🎁 Descuento: -RD$ ${formatMoney(t.monto_descuento)}` : '') +
             `\n✅ Abonado: RD$ ${formatMoney(t.total_abonado)}` +
             `\n⏳ Saldo: RD$ ${formatMoney(t.saldo_pendiente)}` +
-            `\n\nEl PDF de su comprobante ha sido adjuntado. Gracias por preferirnos. 🙏`
+            `\n\nGracias por preferirnos. 🙏`
         );
 
         let telefono = cli?.telefono ? cli.telefono.replace(/\D/g, '') : '';
@@ -602,7 +597,7 @@ export default function TrabajoDetalle() {
                                 <div>
                                     <div style={{ fontWeight: 600, marginBottom: 4 }}>Enviar comprobante del Trabajo #{currentTrabajo.id}</div>
                                     <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                                        Se descargará el PDF y se abrirá WhatsApp con un mensaje pre-redactado para <strong>{cliente?.nombre || 'el cliente'}</strong>.
+                                        Se abrirá WhatsApp con un mensaje pre-redactado para <strong>{cliente?.nombre || 'el cliente'}</strong>.
                                     </div>
                                 </div>
                             </div>
@@ -629,7 +624,7 @@ export default function TrabajoDetalle() {
                     {whatsAppStep === 'sending' && (
                         <div style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
                             <div style={{ fontSize: 48, marginBottom: 'var(--space-4)' }}>📤</div>
-                            <div style={{ fontWeight: 600, marginBottom: 8 }}>Generando PDF y abriendo WhatsApp...</div>
+                            <div style={{ fontWeight: 600, marginBottom: 8 }}>Abriendo WhatsApp...</div>
                             <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Por favor espere un momento</div>
                         </div>
                     )}
@@ -646,7 +641,7 @@ export default function TrabajoDetalle() {
                                 <CheckCircle size={28} style={{ color: '#16a34a', flexShrink: 0 }} />
                                 <div>
                                     <div style={{ fontWeight: 600, marginBottom: 2 }}>✅ Mensaje enviado a WhatsApp</div>
-                                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>El PDF fue descargado y WhatsApp se abrió con el mensaje.</div>
+                                    <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>WhatsApp se abrió con el mensaje.</div>
                                 </div>
                             </div>
                             <div style={{
