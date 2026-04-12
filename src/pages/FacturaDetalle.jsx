@@ -56,7 +56,17 @@ export default function FacturaDetalle() {
 
     const handlePrint = (formato) => {
         setModalPrint(false);
-        const printWindow = window.open('', '_blank');
+        
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = 'none';
+        document.body.appendChild(iframe);
+
+        const printWindow = iframe.contentWindow;
 
         if (formato === 'ticket') {
             printWindow.document.write(`
@@ -231,7 +241,16 @@ export default function FacturaDetalle() {
             `);
         }
         printWindow.document.close();
-        setTimeout(() => { printWindow.print(); }, 300);
+        
+        setTimeout(() => { 
+            printWindow.focus();
+            printWindow.print(); 
+            setTimeout(() => {
+                if (document.body.contains(iframe)) {
+                    document.body.removeChild(iframe);
+                }
+            }, 1000);
+        }, 500);
     };
 
     return (
