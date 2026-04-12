@@ -1,6 +1,6 @@
 [package]
 name = "jrj-sistema"
-version = "1.0.0"
+version = "1.0.2"
 description = "JRJ Centro de Copias y Servicios"
 authors = ["you"]
 license = ""
