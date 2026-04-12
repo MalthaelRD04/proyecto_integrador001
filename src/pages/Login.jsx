@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Printer, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
@@ -9,7 +9,16 @@ export default function Login() {
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
-    const handleSubmit = (e) => {
+    const handleChange = useCallback((e) => {
+        const { name, value } = e.target;
+        setForm(prev => ({ ...prev, [name]: value }));
+    }, []);
+
+    const togglePassword = useCallback(() => {
+        setShowPassword(prev => !prev);
+    }, []);
+
+    const handleSubmit = useCallback((e) => {
         e.preventDefault();
         setError('');
         setLoading(true);
@@ -21,7 +30,7 @@ export default function Login() {
             }
             setLoading(false);
         }, 400);
-    };
+    }, [form, login]);
 
     return (
         <div className="login-page">
@@ -46,36 +55,31 @@ export default function Login() {
                         <label className="form-label">Usuario</label>
                         <input
                             type="text"
+                            name="usuario"
                             className="form-input"
                             placeholder="Ingrese su usuario"
                             value={form.usuario}
-                            onChange={e => setForm({ ...form, usuario: e.target.value })}
+                            onChange={handleChange}
                             required
                             autoFocus
                         />
                     </div>
                     <div className="form-group">
                         <label className="form-label">Contraseña</label>
-                        <div style={{ position: 'relative' }}>
+                        <div className="password-wrapper">
                             <input
                                 type={showPassword ? 'text' : 'password'}
-                                className="form-input"
-                                style={{ paddingRight: 40 }}
+                                name="password"
+                                className="form-input password-input"
                                 placeholder="Ingrese su contraseña"
                                 value={form.password}
-                                onChange={e => setForm({ ...form, password: e.target.value })}
+                                onChange={handleChange}
                                 required
                             />
                             <button
                                 type="button"
-                                onClick={() => setShowPassword(v => !v)}
-                                style={{
-                                    position: 'absolute', right: 10, top: '50%',
-                                    transform: 'translateY(-50%)',
-                                    background: 'none', border: 'none',
-                                    color: 'var(--text-muted)', cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', padding: 0,
-                                }}
+                                className="password-toggle"
+                                onClick={togglePassword}
                                 title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
                             >
                                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -91,10 +95,11 @@ export default function Login() {
                     </button>
                 </form>
 
-                <p style={{ textAlign: 'center', marginTop: 'var(--space-6)', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                <p className="login-footer">
                     San Fernando de Monte Cristi, Rep. Dominicana
                 </p>
             </div>
         </div>
     );
 }
+

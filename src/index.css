@@ -1056,33 +1056,33 @@ tbody tr:last-child td {
 }
 
 .login-card .form-input {
-  color: #0f172a;
-  background: #f0ece7;
-  -webkit-text-fill-color: #0f172a;
+  color: var(--text-primary);
+  background: var(--surface-input);
+  -webkit-text-fill-color: var(--text-primary);
 }
 
 .login-card .form-input:focus {
-  color: #0f172a;
-  background: #ffffff;
-  -webkit-text-fill-color: #0f172a;
+  color: var(--text-primary);
+  background: var(--surface-elevated);
+  -webkit-text-fill-color: var(--text-primary);
 }
 
 .login-card .form-input::placeholder {
-  color: #94a3b8;
-  -webkit-text-fill-color: #94a3b8;
+  color: var(--text-muted);
+  -webkit-text-fill-color: var(--text-muted);
 }
 
 .login-card .form-input:-webkit-autofill,
 .login-card .form-input:-webkit-autofill:hover,
 .login-card .form-input:-webkit-autofill:focus {
-  -webkit-text-fill-color: #0f172a;
-  -webkit-box-shadow: 0 0 0px 1000px #f0ece7 inset;
-  box-shadow: 0 0 0px 1000px #f0ece7 inset;
-  color: #0f172a;
+  -webkit-text-fill-color: var(--text-primary);
+  -webkit-box-shadow: 0 0 0px 1000px var(--surface-input) inset;
+  box-shadow: 0 0 0px 1000px var(--surface-input) inset;
+  color: var(--text-primary);
 }
 
 .login-card .form-label {
-  color: #0f172a;
+  color: var(--text-primary);
 }
 
 .login-btn {
@@ -1091,6 +1091,35 @@ tbody tr:last-child td {
   font-size: var(--text-base);
   font-weight: 600;
   margin-top: var(--space-2);
+}
+
+.password-wrapper {
+  position: relative;
+}
+
+.password-input {
+  padding-right: 40px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+.login-footer {
+  text-align: center;
+  margin-top: var(--space-6);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
 }
 
 /* ── Print Styles ── */
