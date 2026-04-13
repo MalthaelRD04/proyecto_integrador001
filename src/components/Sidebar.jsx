@@ -87,8 +87,8 @@ export default function Sidebar() {
             <aside className={`sidebar ${mobileOpen ? 'open' : ''}`}>
                 <div className="sidebar-header">
                     <div className="sidebar-logo">
-                        <div className="sidebar-logo-icon">
-                            <Printer size={20} />
+                        <div className="sidebar-logo-icon" style={{ background: 'transparent', overflow: 'hidden' }}>
+                            <img src="/logo.png" alt="JRJ Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                         </div>
                         <div className="sidebar-logo-text">
                             <span>JRJ Copias</span>
