@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAll, create, update } from '../data/store';
+import { getAll, create, update, remove } from '../data/store';
+import { useAuth } from '../contexts/AuthContext';
 import Modal from '../components/Modal';
-import { Plus, Search, Edit2, UserCheck, UserX, Settings } from 'lucide-react';
+import { Plus, Search, Edit2, UserCheck, UserX, Settings, Trash2 } from 'lucide-react';
 
 export default function Usuarios() {
     const navigate = useNavigate();
+    const { user: currentUser } = useAuth();
+    const isAdmin = currentUser?.rol === 'admin';
     const [data, setData] = useState([]);
     const [search, setSearch] = useState('');
     const [modal, setModal] = useState(null);
@@ -46,6 +49,28 @@ export default function Usuarios() {
     const toggleActive = async (u) => {
         await update('usuarios', u.id, { activo: !u.activo });
         reload();
+    };
+
+    const handleDelete = async (u) => {
+        if (u.id === currentUser.id) {
+            alert('No puedes eliminar tu propia cuenta.');
+            return;
+        }
+        // Verificar si tiene datos asociados
+        const facturas = (await getAll('facturas')).filter(f => f.usuario_id === u.id);
+        if (facturas.length > 0) {
+            alert(`No se puede eliminar. Este usuario tiene ${facturas.length} factura(s) asociada(s).`);
+            return;
+        }
+        const trabajos = (await getAll('trabajos')).filter(t => t.usuario_id === u.id);
+        if (trabajos.length > 0) {
+            alert(`No se puede eliminar. Este usuario tiene ${trabajos.length} trabajo(s) asociado(s).`);
+            return;
+        }
+        if (confirm(`¿Eliminar permanentemente al usuario "${u.nombre}"? Esta acción no se puede deshacer.`)) {
+            await remove('usuarios', u.id);
+            reload();
+        }
     };
 
     return (
@@ -110,6 +135,16 @@ export default function Usuarios() {
                                             >
                                                 <Settings size={14} />
                                             </button>
+                                            {isAdmin && (
+                                                <button
+                                                    className="btn btn-icon btn-sm btn-ghost"
+                                                    onClick={() => handleDelete(u)}
+                                                    title="Eliminar usuario"
+                                                    style={{ color: 'var(--color-danger)' }}
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>

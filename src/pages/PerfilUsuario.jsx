@@ -50,7 +50,7 @@ export default function PerfilUsuario() {
                 direccion: u.direccion || '',
                 bio: u.bio || '',
             });
-            const savedFoto = obtenerFotoUsuario(u.id);
+            const savedFoto = await obtenerFotoUsuario(u.id);
             if (savedFoto) {
                 setFotoGuardada(savedFoto);
                 setFotoPreview(savedFoto);
@@ -82,19 +82,19 @@ export default function PerfilUsuario() {
     };
 
     // ── Guardar foto ──
-    const handleGuardarFoto = () => {
+    const handleGuardarFoto = async () => {
         if (!fotoPreview) {
             showToast('No hay foto seleccionada.', 'error');
             return;
         }
-        guardarFotoUsuario(Number(id), fotoPreview);
+        await guardarFotoUsuario(Number(id), fotoPreview);
         setFotoGuardada(fotoPreview);
         showToast('Foto de perfil guardada correctamente.');
     };
 
     // ── Eliminar foto ──
-    const handleEliminarFoto = () => {
-        eliminarFotoUsuario(Number(id));
+    const handleEliminarFoto = async () => {
+        await eliminarFotoUsuario(Number(id));
         setFotoGuardada(null);
         setFotoPreview(null);
         setConfirmEliminar(false);

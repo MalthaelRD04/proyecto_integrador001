@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
 import { getAll, create, update, remove } from '../data/store';
+import { useAuth } from '../contexts/AuthContext';
 import Modal from '../components/Modal';
 import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
 
 export default function Categorias() {
+    const { user } = useAuth();
+    const isAdmin = user?.rol === 'admin';
     const [data, setData] = useState([]);
     const [itemsMap, setItemsMap] = useState({});
     const [search, setSearch] = useState('');
@@ -96,7 +99,9 @@ export default function Categorias() {
                                         <td className="text-right">
                                             <div className="flex gap-2" style={{ justifyContent: 'flex-end' }}>
                                                 <button className="btn btn-icon btn-sm btn-ghost" onClick={() => openEdit(c)}><Edit2 size={14} /></button>
-                                                <button className="btn btn-icon btn-sm btn-ghost" onClick={() => handleDelete(c.id)}><Trash2 size={14} /></button>
+                                                {isAdmin && (
+                                                    <button className="btn btn-icon btn-sm btn-ghost" onClick={() => handleDelete(c.id)}><Trash2 size={14} /></button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

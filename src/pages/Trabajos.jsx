@@ -174,7 +174,9 @@ export default function Trabajos() {
                                                     <MessageCircle size={14} />
                                                 </button>
                                                 <button className="btn btn-icon btn-sm btn-ghost" onClick={() => openEdit(t)} title="Editar"><Edit2 size={14} /></button>
-                                                <button className="btn btn-icon btn-sm btn-ghost" onClick={() => handleDelete(t.id)} title="Eliminar"><Trash2 size={14} /></button>
+                                                {user?.rol === 'admin' && (
+                                                    <button className="btn btn-icon btn-sm btn-ghost" onClick={() => handleDelete(t.id)} title="Eliminar"><Trash2 size={14} /></button>
+                                                )}
                                                 <Link to={`/trabajos/${t.id}`} className="btn btn-sm btn-ghost">
                                                     <Eye size={14} /> Ver
                                                 </Link>
