@@ -49,39 +49,47 @@ export default function Trabajos() {
     };
 
     const handleSave = async () => {
-        if (!form.cliente_id || !form.descripcion || !form.precio_total) return;
-        const nuevoPrecio = Number(form.precio_total);
-        const nuevoDescto = form.tiene_descuento ? Number(form.monto_descuento) || 0 : 0;
-
-        const payload = {
-            cliente_id: Number(form.cliente_id),
-            usuario_id: user.id,
-            descripcion: form.descripcion,
-            precio_total: nuevoPrecio,
-            tiene_descuento: form.tiene_descuento,
-            monto_descuento: nuevoDescto,
-            fecha_entrega_estimada: form.fecha_entrega_estimada || null,
-            nota: form.nota,
-        };
-
-        if (form.id) {
-            payload.saldo_pendiente = nuevoPrecio - nuevoDescto - (Number(form.total_abonado) || 0);
-            if (payload.saldo_pendiente <= 0) {
-                payload.saldo_pendiente = 0;
-                payload.estado = 'entregado';
-                payload.fecha_entrega_real = payload.fecha_entrega_real || new Date().toISOString();
-            } else if (form.estado === 'entregado') {
-                payload.estado = 'en_proceso';
-                payload.fecha_entrega_real = null;
-            }
-            await update('trabajos', form.id, payload);
-        } else {
-            await crearTrabajo(payload);
+        if (!form.cliente_id || !form.descripcion || !form.precio_total) {
+            alert('Faltan campos obligatorios: cliente, descripción o precio.');
+            return;
         }
-        
-        setModal(false);
-        setForm({ cliente_id: '', descripcion: '', precio_total: '', tiene_descuento: false, monto_descuento: '', fecha_entrega_estimada: '', nota: '' });
-        reload();
+        try {
+            const nuevoPrecio = Number(form.precio_total);
+            const nuevoDescto = form.tiene_descuento ? Number(form.monto_descuento) || 0 : 0;
+
+            const payload = {
+                cliente_id: Number(form.cliente_id),
+                usuario_id: user.id,
+                descripcion: form.descripcion,
+                precio_total: nuevoPrecio,
+                tiene_descuento: form.tiene_descuento,
+                monto_descuento: nuevoDescto,
+                fecha_entrega_estimada: form.fecha_entrega_estimada || '',
+                nota: form.nota,
+            };
+
+            if (form.id) {
+                payload.saldo_pendiente = nuevoPrecio - nuevoDescto - (Number(form.total_abonado) || 0);
+                if (payload.saldo_pendiente <= 0) {
+                    payload.saldo_pendiente = 0;
+                    payload.estado = 'entregado';
+                    payload.fecha_entrega_real = payload.fecha_entrega_real || new Date().toISOString();
+                } else if (form.estado === 'entregado') {
+                    payload.estado = 'en_proceso';
+                    payload.fecha_entrega_real = '';
+                }
+                await update('trabajos', form.id, payload);
+            } else {
+                await crearTrabajo(payload);
+            }
+            
+            setModal(false);
+            setForm({ cliente_id: '', descripcion: '', precio_total: '', tiene_descuento: false, monto_descuento: '', fecha_entrega_estimada: '', nota: '' });
+            reload();
+        } catch (e) {
+            console.error('Error guardando trabajo:', e);
+            alert('Error guardando el trabajo: ' + (e.message || e));
+        }
     };
 
     const openCreate = () => {
@@ -239,7 +247,7 @@ export default function Trabajos() {
                         <textarea className="form-textarea" value={form.nota} onChange={e => setForm({ ...form, nota: e.target.value })} placeholder="Observaciones adicionales..." />
                     </div>
                     {form.precio_total && (
-                        <div style={{ padding: 'var(--space-3) var(--space-4)', background: 'var(--blue-50)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)' }}>
+                        <div className="saldo-box">
                             <strong>Saldo a cobrar: </strong>
                             RD$ {formatMoney(Number(form.precio_total) - (form.tiene_descuento ? Number(form.monto_descuento) || 0 : 0))}
                         </div>

@@ -378,7 +378,7 @@ export async function crearTrabajo(data) {
 
     const result = await db.execute(
         `INSERT INTO trabajos (cliente_id, usuario_id, descripcion, precio_total, tiene_descuento, monto_descuento, total_abonado, saldo_pendiente, estado, fecha_recibido, fecha_entrega_estimada, fecha_entrega_real, nota) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-        [data.cliente_id, data.usuario_id, data.descripcion, Number(data.precio_total), data.tiene_descuento ? 1 : 0, monto_descuento, 0, saldo_pendiente, 'pendiente', now(), data.fecha_entrega_estimada || null, null, data.nota || '']
+        [data.cliente_id, data.usuario_id, data.descripcion, Number(data.precio_total), data.tiene_descuento ? 1 : 0, monto_descuento, 0, saldo_pendiente, 'pendiente', now(), data.fecha_entrega_estimada || '', '', data.nota || '']
     );
 
     return await getById('trabajos', result.lastInsertId);

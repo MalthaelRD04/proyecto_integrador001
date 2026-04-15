@@ -5,14 +5,14 @@
 
 :root {
   /* ── Color Primitives (JRJ Brand) ── */
-  --blue-50: #e8f0f8;
-  --blue-100: #cddfef;
-  --blue-200: #a8c8e2;
-  --blue-400: #5a9cc7;
-  --blue-500: #4390be;
-  --blue-600: #2e6f9e;
-  --blue-700: #255d85;
-  --blue-800: #1c4a6b;
+  --blue-50: #eaf3fb;
+  --blue-100: #d4e7f6;
+  --blue-200: #a9ceed;
+  --blue-400: #54a0df;
+  --blue-500: #428ade;
+  --blue-600: #347dc8;
+  --blue-700: #2a619c;
+  --blue-800: #15304e;
 
   --slate-50: #f8fafc;
   --slate-100: #f1f5f9;
@@ -31,17 +31,17 @@
   --green-600: #16a34a;
   --green-700: #15803d;
 
-  --amber-50: #fffbeb;
-  --amber-500: #f59e0b;
-  --amber-600: #d97706;
+  --amber-50: #fffcf0;
+  --amber-500: #ffde42;
+  --amber-600: #ffd322;
 
   --orange-50: #fff7ed;
   --orange-500: #f97316;
   --orange-600: #ea580c;
 
   --red-50: #fef2f2;
-  --red-500: #ef4444;
-  --red-600: #dc2626;
+  --red-500: #f86f5c;
+  --red-600: #eb553e;
 
   /* ── Semantic Tokens (JRJ Brand) ── */
   --color-primary: var(--blue-600);
@@ -590,20 +590,26 @@ tbody tr:last-child td {
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-full);
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: 600;
   border: none;
   transition: all var(--transition-fast);
   white-space: nowrap;
   line-height: 1.5;
-  height: 36px;
+  height: 40px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08); /* playful depth */
+}
+
+.btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 .btn svg {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 .btn-primary {
@@ -654,15 +660,17 @@ tbody tr:last-child td {
 }
 
 .btn-sm {
-  height: 30px;
+  height: 32px;
   padding: var(--space-1) var(--space-3);
   font-size: var(--text-xs);
+  border-radius: var(--radius-full);
 }
 
 .btn-lg {
-  height: 44px;
+  height: 48px;
   padding: var(--space-3) var(--space-6);
   font-size: var(--text-base);
+  border-radius: var(--radius-full);
 }
 
 .btn-icon {
@@ -773,6 +781,21 @@ tbody tr:last-child td {
 .badge-slate {
   background: var(--slate-100);
   color: var(--slate-600);
+}
+
+/* ── Custom Boxes ── */
+.saldo-box {
+  padding: var(--space-3) var(--space-4);
+  background: var(--blue-50);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+:root[data-theme='dark'] .saldo-box {
+  background: rgba(52, 125, 200, 0.15);
+  color: var(--blue-100);
+  border: 1px solid rgba(52, 125, 200, 0.3);
 }
 
 /* ── Modal ── */
@@ -1128,6 +1151,18 @@ tbody tr:last-child td {
   max-width: 800px;
   margin: 0 auto;
   padding: var(--space-8);
+  color: var(--slate-900);
+
+  /* Force light theme colors for printing/preview context */
+  --text-primary: var(--slate-900);
+  --text-secondary: var(--slate-600);
+  --text-tertiary: var(--slate-500);
+  --text-muted: var(--slate-400);
+  --border-default: rgba(44, 82, 120, 0.1);
+  --border-strong: rgba(44, 82, 120, 0.18);
+  --slate-50: #f8fafc;
+  --slate-100: #f1f5f9;
+  --slate-200: #e2e8f0;
 }
 
 .invoice-print-header {
