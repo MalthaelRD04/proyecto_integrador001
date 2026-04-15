@@ -3,12 +3,14 @@ import html2pdf from 'html2pdf.js';
 import { open as shellOpen } from '@tauri-apps/plugin-shell';
 
 export const generarPDFFactura = (factura, cliente, usuario, detalles, action = 'download') => {
+    const appUbicacion = localStorage.getItem('app_ubicacion') || 'San Fernando de Monte Cristi, R.D.';
+
     // Usaremos el diseño de la hoja completa (recibo)
     const htmlString = `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1a1a2e; width: 800px; box-sizing: border-box;">
             <div style="text-align: center; margin-bottom: 24px; border-bottom: 2px solid #1a1a2e; padding-bottom: 16px;">
                 <h2 style="font-size: 24px; margin-bottom: 4px;">JRJ Centro de Copias y Servicios</h2>
-                <p style="font-size: 14px; color: #666; margin: 0;">San Fernando de Monte Cristi, R.D.</p>
+                <p style="font-size: 14px; color: #666; margin: 0;">${appUbicacion}</p>
                 <p style="margin-top: 8px; font-size: 12px; color: #999;">${formatDateTime(factura.fecha)}</p>
             </div>
             <div style="text-align: right; margin-bottom: 30px;">
@@ -118,11 +120,13 @@ export const generarPDFFactura = (factura, cliente, usuario, detalles, action = 
 };
 
 export const generarPDFTrabajo = (trabajo, cliente, usuario, abonosList, action = 'download') => {
+    const appUbicacion = localStorage.getItem('app_ubicacion') || 'San Fernando de Monte Cristi, R.D.';
+
     const htmlString = `
         <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1a1a2e; width: 800px; box-sizing: border-box;">
             <div style="text-align: center; margin-bottom: 24px; border-bottom: 2px solid #1a1a2e; padding-bottom: 16px;">
                 <h2 style="font-size: 24px; margin-bottom: 4px;">JRJ Centro de Copias y Servicios</h2>
-                <p style="font-size: 14px; color: #666; margin: 0;">San Fernando de Monte Cristi, R.D.</p>
+                <p style="font-size: 14px; color: #666; margin: 0;">${appUbicacion}</p>
                 <p style="margin-top: 8px; font-size: 14px; font-weight: 600;">FACTURA DE TRABAJO MANUAL #${trabajo.id}</p>
             </div>
             <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">

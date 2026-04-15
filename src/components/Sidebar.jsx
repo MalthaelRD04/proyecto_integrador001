@@ -8,6 +8,7 @@ import {
 import { useState, useEffect } from 'react';
 import Modal from './Modal';
 import { applyTheme } from '../App';
+import { MapPin } from 'lucide-react';
 
 const navItems = [
     {
@@ -49,6 +50,7 @@ export default function Sidebar() {
     
     const [theme, setTheme] = useState(localStorage.getItem('app_theme') || 'system');
     const [fontSize, setFontSize] = useState(localStorage.getItem('app_fontSize') || '16px');
+    const [ubicacion, setUbicacion] = useState(localStorage.getItem('app_ubicacion') || 'San Fernando de Monte Cristi, R.D.');
 
     useEffect(() => {
         applyTheme(theme);
@@ -59,6 +61,10 @@ export default function Sidebar() {
         document.documentElement.style.fontSize = fontSize;
         localStorage.setItem('app_fontSize', fontSize);
     }, [fontSize]);
+
+    useEffect(() => {
+        localStorage.setItem('app_ubicacion', ubicacion);
+    }, [ubicacion]);
 
     return (
         <>
@@ -200,6 +206,22 @@ export default function Sidebar() {
                         </div>
                         <p className="form-hint" style={{ marginTop: '12px' }}>
                             Ajustar el tamaño ampliará todos los textos de la interfaz para tu comodidad visual.
+                        </p>
+                    </div>
+
+                    <div style={{ marginTop: 'var(--space-6)' }}>
+                        <div className="form-label mb-3" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                            <MapPin size={16} /> Ubicación del Sistema
+                        </div>
+                        <input
+                            type="text"
+                            className="form-input"
+                            value={ubicacion}
+                            onChange={(e) => setUbicacion(e.target.value)}
+                            placeholder="Ej: San Fernando de Monte Cristi, R.D."
+                        />
+                        <p className="form-hint" style={{ marginTop: '12px' }}>
+                            Esta ubicación se mostrará en el login y en las facturas generadas.
                         </p>
                     </div>
                 </Modal>

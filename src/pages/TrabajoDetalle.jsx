@@ -56,6 +56,8 @@ export default function TrabajoDetalle() {
     const currentTrabajo = trabajo;
     const currentAbonos = abonosList;
 
+    const appUbicacion = localStorage.getItem('app_ubicacion') || 'San Fernando de Monte Cristi, R.D.';
+
     const handlePrint = (formato) => {
         setModalPrint(false);
         const t = currentTrabajo;
@@ -105,7 +107,7 @@ export default function TrabajoDetalle() {
                     <div class="header">
                         <h1>JRJ Centro de Copias</h1>
                         <p>y Servicios</p>
-                        <p>San Fernando de Monte Cristi, R.D.</p>
+                        <p>${appUbicacion}</p>
                     </div>
                     <hr class="divider-double"/>
                     <div class="title">FACTURA TRABAJO #${t.id}</div>
@@ -177,7 +179,7 @@ export default function TrabajoDetalle() {
                 <body>
                     <div class="header">
                         <h1>JRJ Centro de Copias y Servicios</h1>
-                        <p>San Fernando de Monte Cristi, R.D.</p>
+                        <p>${appUbicacion}</p>
                         <p style="margin-top:8px; font-size:14px; font-weight:600;">FACTURA DE TRABAJO MANUAL #${t.id}</p>
                     </div>
                     <div class="info-grid">

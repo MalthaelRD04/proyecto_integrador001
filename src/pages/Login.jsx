@@ -32,6 +32,8 @@ export default function Login() {
         }, 400);
     }, [form, login]);
 
+    const ubicacion = localStorage.getItem('app_ubicacion') || 'San Fernando de Monte Cristi, R.D.';
+
     return (
         <div className="login-page">
             <div className="login-card">
@@ -96,7 +98,7 @@ export default function Login() {
                 </form>
 
                 <p className="login-footer">
-                    San Fernando de Monte Cristi, Rep. Dominicana
+                    {ubicacion}
                 </p>
             </div>
         </div>

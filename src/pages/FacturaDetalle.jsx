@@ -54,6 +54,8 @@ export default function FacturaDetalle() {
         );
     }
 
+    const appUbicacion = localStorage.getItem('app_ubicacion') || 'San Fernando de Monte Cristi, R.D.';
+
     const handlePrint = (formato) => {
         setModalPrint(false);
         
@@ -100,7 +102,7 @@ export default function FacturaDetalle() {
                     <div class="header">
                         <h1>JRJ Centro de Copias</h1>
                         <p>y Servicios</p>
-                        <p>San Fernando de Monte Cristi, R.D.</p>
+                        <p>${appUbicacion}</p>
                     </div>
                     <hr class="divider-double"/>
                     <div class="title">${factura.numero_factura}</div>
@@ -176,7 +178,7 @@ export default function FacturaDetalle() {
                 <body>
                     <div class="header">
                         <h2>JRJ Centro de Copias y Servicios</h2>
-                        <p>San Fernando de Monte Cristi, R.D.</p>
+                        <p>${appUbicacion}</p>
                         <p style="margin-top:4px; font-size:11px; color:#999;">${formatDateTime(factura.fecha)}</p>
                     </div>
                     <div class="invoice-meta">
@@ -277,7 +279,7 @@ export default function FacturaDetalle() {
                             <div className="invoice-company">
                                 <h2>EMPRESA DE PROGRAMACION</h2>
                                 <p>JRJ Centro de Copias y Servicios</p>
-                                <p>San Fernando de Monte Cristi, R.D.</p>
+                                <p>{appUbicacion}</p>
                                 <p style={{ marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
                                     {formatDateTime(factura.fecha)}
                                 </p>
