@@ -1,14 +1,31 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { getById, getAll, update, registrarAbono, formatMoney, formatDate, formatDateTime, guardarTrabajoComoFactura } from '../data/store';
+import { update, registrarAbono, guardarTrabajoComoFactura, formatDate } from '../data/store';
 import Modal from '../components/Modal';
 import { ArrowLeft, Plus, DollarSign, Calendar, User, AlertCircle, CheckCircle, Printer, MessageCircle, Save, X, Send, FileText } from 'lucide-react';
-import { generarPDFTrabajo } from '../utils/pdfGenerator';
 import { open as shellOpen } from '@tauri-apps/plugin-shell';
+
+// Custom Hooks & Components
+import { useTrabajo, useAbonos } from '../hooks/useTrabajo';
+import ResumenFinanciero from '../components/trabajos/ResumenFinanciero';
+import HistorialAbonos from '../components/trabajos/HistorialAbonos';
+import { WHATSAPP_TEMPLATES } from '../utils/whatsappTemplates';
 
 export default function TrabajoDetalle() {
     const { id } = useParams();
-    const [refresh, setRefresh] = useState(0);
+    
+    // Data Hooks
+    const { 
+        trabajo, cliente, usuario, loading: loadingTrabajo, 
+        triggerRefresh: refreshTrabajo 
+    } = useTrabajo(id);
+    
+    const { 
+        abonos: abonosList, loading: loadingAbonos, 
+        triggerRefresh: refreshAbonos 
+    } = useAbonos(id);
+
+    // UI State
     const [modalAbono, setModalAbono] = useState(false);
     const [abonoForm, setAbonoForm] = useState({ monto: '', metodo_pago: 'efectivo', nota: '' });
     const [error, setError] = useState('');
@@ -16,31 +33,10 @@ export default function TrabajoDetalle() {
     const [modalPrint, setModalPrint] = useState(false);
     const [modalWhatsApp, setModalWhatsApp] = useState(false);
     const [whatsAppStep, setWhatsAppStep] = useState('idle'); // idle | sending | sent | saving | saved
+    const [selectedTemplate, setSelectedTemplate] = useState('GENERICO');
     const [facturaGuardada, setFacturaGuardada] = useState(null);
 
-    const [trabajo, setTrabajo] = useState(null);
-    const [cliente, setCliente] = useState(null);
-    const [usuario, setUsuario] = useState(null);
-    const [abonosList, setAbonosList] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        async function load() {
-            setLoading(true);
-            const t = await getById('trabajos', id);
-            if (t) {
-                setTrabajo(t);
-                if (t.cliente_id) setCliente(await getById('clientes', t.cliente_id));
-                if (t.usuario_id) setUsuario(await getById('usuarios', t.usuario_id));
-                const allAbonos = await getAll('abonos_trabajo');
-                setAbonosList(allAbonos.filter(a => a.trabajo_id === Number(id)));
-            }
-            setLoading(false);
-        }
-        load();
-    }, [id, refresh]);
-
-    if (loading) return <div style={{ padding: 'var(--space-8)' }}>Cargando...</div>;
+    if (loadingTrabajo || loadingAbonos) return <div style={{ padding: 'var(--space-8)' }}>Cargando...</div>;
 
     if (!trabajo) {
         return (
@@ -53,17 +49,13 @@ export default function TrabajoDetalle() {
         );
     }
 
-    const currentTrabajo = trabajo;
-    const currentAbonos = abonosList;
-
     const appUbicacion = localStorage.getItem('app_ubicacion') || 'San Fernando de Monte Cristi, R.D.';
 
     const handlePrint = (formato) => {
         setModalPrint(false);
-        const t = currentTrabajo;
+        const t = trabajo;
         const cli = cliente;
         const usr = usuario;
-        const neto = Number(t.precio_total) - Number(t.monto_descuento);
 
         const iframe = document.createElement('iframe');
         iframe.style.position = 'fixed';
@@ -78,7 +70,7 @@ export default function TrabajoDetalle() {
 
         if (formato === 'ticket') {
             printWindow.document.write(`
-                <html>
+                <html lang="es">
                 <head>
                     <title>Factura Trabajo #${t.id}</title>
                     <style>
@@ -118,9 +110,9 @@ export default function TrabajoDetalle() {
                     <div class="info-row"><span class="label">Atendido por:</span><span>${usr?.nombre || '—'}</span></div>
                     <div class="info-row"><span class="label">Estado:</span><span class="estado">${t.estado.replace('_', ' ')}</span></div>
                     <hr class="divider"/>
-                    <div class="info-row"><span class="label">Recibido:</span><span>${formatDate(t.fecha_recibido)}</span></div>
-                    <div class="info-row"><span class="label">Entrega Est.:</span><span>${formatDate(t.fecha_entrega_estimada)}</span></div>
-                    ${t.fecha_entrega_real ? `<div class="info-row"><span class="label">Entrega Real:</span><span>${formatDate(t.fecha_entrega_real)}</span></div>` : ''}
+                    <div class="info-row"><span class="label">Recibido:</span><span>${new Date(t.fecha_recibido).toLocaleDateString()}</span></div>
+                    <div class="info-row"><span class="label">Entrega Est.:</span><span>${new Date(t.fecha_entrega_estimada).toLocaleDateString()}</span></div>
+                    ${t.fecha_entrega_real ? `<div class="info-row"><span class="label">Entrega Real:</span><span>${new Date(t.fecha_entrega_real).toLocaleDateString()}</span></div>` : ''}
                     <hr class="divider"/>
                     <div class="section-title">Descripcion</div>
                     <div class="description">${t.descripcion}</div>
@@ -128,14 +120,14 @@ export default function TrabajoDetalle() {
                         <hr class="divider"/>
                         <div class="section-title">Historial de Abonos</div>
                         ${abonosList.map((a, i) => `
-                            <div class="abono-item">${i + 1}. RD$${formatMoney(a.monto)} - ${a.metodo_pago} (${formatDate(a.fecha)})${a.nota ? ' - ' + a.nota : ''}</div>
+                            <div class="abono-item">${i + 1}. RD$${a.monto} - ${a.metodo_pago} (${new Date(a.fecha).toLocaleDateString()})${a.nota ? ' - ' + a.nota : ''}</div>
                         `).join('')}
                     ` : ''}
                     <hr class="divider-double"/>
-                    <div class="total-line"><span>Precio Total:</span><span>RD$ ${formatMoney(t.precio_total)}</span></div>
-                    ${t.tiene_descuento ? `<div class="total-line"><span>Descuento:</span><span>-RD$ ${formatMoney(t.monto_descuento)}</span></div>` : ''}
-                    <div class="total-line"><span>Total Abonado:</span><span>RD$ ${formatMoney(t.total_abonado)}</span></div>
-                    <div class="total-line grand"><span>SALDO:</span><span>RD$ ${formatMoney(t.saldo_pendiente)}</span></div>
+                    <div class="total-line"><span>Precio Total:</span><span>RD$ ${t.precio_total}</span></div>
+                    ${t.tiene_descuento ? `<div class="total-line"><span>Descuento:</span><span>-RD$ ${t.monto_descuento}</span></div>` : ''}
+                    <div class="total-line"><span>Total Abonado:</span><span>RD$ ${t.total_abonado}</span></div>
+                    <div class="total-line grand"><span>SALDO:</span><span>RD$ ${t.saldo_pendiente}</span></div>
                     <hr class="divider"/>
                     <div class="footer">
                         <p>Gracias por su preferencia</p>
@@ -146,7 +138,7 @@ export default function TrabajoDetalle() {
             `);
         } else {
             printWindow.document.write(`
-                <html>
+                <html lang="es">
                 <head>
                     <title>Factura Trabajo #${t.id}</title>
                     <style>
@@ -198,11 +190,11 @@ export default function TrabajoDetalle() {
                     <div class="info-grid">
                         <div class="info-block">
                             <h4>Fecha Recibido</h4>
-                            <p>${formatDate(t.fecha_recibido)}</p>
+                            <p>${new Date(t.fecha_recibido).toLocaleDateString()}</p>
                         </div>
                         <div class="info-block">
                             <h4>Entrega Estimada</h4>
-                            <p>${formatDate(t.fecha_entrega_estimada)}</p>
+                            <p>${new Date(t.fecha_entrega_estimada).toLocaleDateString()}</p>
                         </div>
                     </div>
                     <div class="description">
@@ -216,9 +208,9 @@ export default function TrabajoDetalle() {
                             <tbody>
                                 ${abonosList.map(a => `
                                     <tr>
-                                        <td>${formatDateTime(a.fecha)}</td>
+                                        <td>${new Date(a.fecha).toLocaleString()}</td>
                                         <td style="text-transform:capitalize">${a.metodo_pago}</td>
-                                        <td class="text-right" style="font-weight:600; color:#16a34a;">+RD$ ${formatMoney(a.monto)}</td>
+                                        <td class="text-right" style="font-weight:600; color:#16a34a;">+RD$ ${a.monto}</td>
                                         <td>${a.nota || '—'}</td>
                                     </tr>
                                 `).join('')}
@@ -228,13 +220,13 @@ export default function TrabajoDetalle() {
                     <div class="totals">
                         <table>
                             <tbody>
-                                <tr><td>Precio Total</td><td class="text-right">RD$ ${formatMoney(t.precio_total)}</td></tr>
-                                ${t.tiene_descuento ? `<tr><td style="color:#16a34a">Descuento</td><td class="text-right" style="color:#16a34a">-RD$ ${formatMoney(t.monto_descuento)}</td></tr>` : ''}
-                                <tr><td>Total Abonado</td><td class="text-right" style="color:#16a34a">RD$ ${formatMoney(t.total_abonado)}</td></tr>
+                                <tr><td>Precio Total</td><td class="text-right">RD$ ${t.precio_total}</td></tr>
+                                ${t.tiene_descuento ? `<tr style="color:#16a34a"><td>Descuento</td><td class="text-right">-RD$ ${t.monto_descuento}</td></tr>` : ''}
+                                <tr><td>Total Abonado</td><td class="text-right" style="color:#16a34a">RD$ ${t.total_abonado}</td></tr>
                                 <tr class="total-row">
                                     <td>Saldo Pendiente</td>
                                     <td class="text-right" style="color:${t.saldo_pendiente > 0 ? '#dc2626' : '#16a34a'}">
-                                        RD$ ${formatMoney(t.saldo_pendiente)}
+                                        RD$ ${t.saldo_pendiente}
                                     </td>
                                 </tr>
                             </tbody>
@@ -268,23 +260,13 @@ export default function TrabajoDetalle() {
     };
 
     const handleEnviarWhatsApp = () => {
-        const t = currentTrabajo;
+        const t = trabajo;
         const cli = cliente;
-        const usr = usuario;
 
         setWhatsAppStep('sending');
 
-        // Preparar mensaje de WhatsApp
-        const neto = Number(t.precio_total) - Number(t.monto_descuento || 0);
-        const mensaje = encodeURIComponent(
-            `Hola ${cli?.nombre || 'estimado cliente'}, le enviamos el resumen de su trabajo #${t.id} de JRJ Centro de Copias y Servicios:\n\n` +
-            `📋 Descripción: ${t.descripcion}\n` +
-            `💰 Total: RD$ ${formatMoney(t.precio_total)}` +
-            (t.tiene_descuento ? `\n🎁 Descuento: -RD$ ${formatMoney(t.monto_descuento)}` : '') +
-            `\n✅ Abonado: RD$ ${formatMoney(t.total_abonado)}` +
-            `\n⏳ Saldo: RD$ ${formatMoney(t.saldo_pendiente)}` +
-            `\n\nGracias por preferirnos. 🙏`
-        );
+        const template = WHATSAPP_TEMPLATES[selectedTemplate];
+        const mensaje = encodeURIComponent(template.message(t, cli));
 
         let telefono = cli?.telefono ? cli.telefono.replace(/\D/g, '') : '';
         if (telefono && !telefono.startsWith('1') && !telefono.startsWith('52')) {
@@ -303,12 +285,12 @@ export default function TrabajoDetalle() {
     const handleGuardarFactura = async () => {
         setWhatsAppStep('saving');
         try {
-            const factura = await guardarTrabajoComoFactura(currentTrabajo);
+            const factura = await guardarTrabajoComoFactura(trabajo);
             setFacturaGuardada(factura);
             setWhatsAppStep('saved');
             setSuccess('✅ Factura guardada en el sistema exitosamente');
             setTimeout(() => setSuccess(''), 4000);
-            setRefresh(r => r + 1);
+            refreshTrabajo();
         } catch (e) {
             setError('Error al guardar la factura: ' + e.message);
             setTimeout(() => setError(''), 4000);
@@ -327,15 +309,15 @@ export default function TrabajoDetalle() {
     };
 
     const cambiarEstado = async (nuevoEstado) => {
-        await update('trabajos', currentTrabajo.id, {
+        await update('trabajos', trabajo.id, {
             estado: nuevoEstado,
             ...(nuevoEstado === 'entregado' ? { fecha_entrega_real: new Date().toISOString() } : {}),
         });
-        setRefresh(r => r + 1);
+        refreshTrabajo();
     };
 
     const handleAbono = async () => {
-        const result = await registrarAbono(currentTrabajo.id, abonoForm.monto, abonoForm.metodo_pago, abonoForm.nota);
+        const result = await registrarAbono(trabajo.id, abonoForm.monto, abonoForm.metodo_pago, abonoForm.nota);
         if (result.error) {
             setError(result.error);
             setTimeout(() => setError(''), 3000);
@@ -345,7 +327,8 @@ export default function TrabajoDetalle() {
         setTimeout(() => setSuccess(''), 3000);
         setModalAbono(false);
         setAbonoForm({ monto: '', metodo_pago: 'efectivo', nota: '' });
-        setRefresh(r => r + 1);
+        refreshTrabajo();
+        refreshAbonos();
     };
 
     return (
@@ -358,14 +341,14 @@ export default function TrabajoDetalle() {
                     <ArrowLeft size={16} /> Volver
                 </Link>
                 <div className="flex gap-2">
-                    {currentTrabajo.estado !== 'entregado' && currentTrabajo.estado !== 'cancelado' && (
+                    {trabajo.estado !== 'entregado' && trabajo.estado !== 'cancelado' && (
                         <>
-                            {currentTrabajo.estado === 'pendiente' && (
+                            {trabajo.estado === 'pendiente' && (
                                 <button className="btn btn-primary btn-sm" onClick={() => cambiarEstado('en_proceso')}>
                                     Marcar En Proceso
                                 </button>
                             )}
-                            {currentTrabajo.saldo_pendiente > 0 && (
+                            {trabajo.saldo_pendiente > 0 && (
                                 <button className="btn btn-success btn-sm" onClick={() => setModalAbono(true)}>
                                     <Plus size={14} /> Registrar Abono
                                 </button>
@@ -384,8 +367,8 @@ export default function TrabajoDetalle() {
                     <div className="card" style={{ marginBottom: 'var(--space-4)' }}>
                         <div className="card-header">
                             <span className="card-title">Detalles del Trabajo</span>
-                            <span className={`badge ${estadoBadge(currentTrabajo.estado)}`}>
-                                {estadoLabel(currentTrabajo.estado)}
+                            <span className={`badge ${estadoBadge(trabajo.estado)}`}>
+                                {estadoLabel(trabajo.estado)}
                             </span>
                         </div>
                         <div className="card-body">
@@ -406,7 +389,7 @@ export default function TrabajoDetalle() {
                             <div style={{ marginBottom: 'var(--space-4)' }}>
                                 <div className="text-small" style={{ marginBottom: 4 }}>DESCRIPCIÓN</div>
                                 <div style={{ padding: 'var(--space-3) var(--space-4)', background: 'var(--slate-50)', borderRadius: 'var(--radius-md)' }}>
-                                    {currentTrabajo.descripcion}
+                                    {trabajo.descripcion}
                                 </div>
                             </div>
 
@@ -415,129 +398,50 @@ export default function TrabajoDetalle() {
                                     <div className="text-small" style={{ marginBottom: 4 }}>
                                         <Calendar size={12} style={{ display: 'inline', verticalAlign: 'middle' }} /> RECIBIDO
                                     </div>
-                                    <div>{formatDate(currentTrabajo.fecha_recibido)}</div>
+                                    <div>{formatDate(trabajo.fecha_recibido)}</div>
                                 </div>
                                 <div>
                                     <div className="text-small" style={{ marginBottom: 4 }}>ENTREGA ESTIMADA</div>
-                                    <div>{formatDate(currentTrabajo.fecha_entrega_estimada)}</div>
+                                    <div>{formatDate(trabajo.fecha_entrega_estimada)}</div>
                                 </div>
                                 <div>
                                     <div className="text-small" style={{ marginBottom: 4 }}>ENTREGA REAL</div>
-                                    <div>{currentTrabajo.fecha_entrega_real ? formatDate(currentTrabajo.fecha_entrega_real) : '—'}</div>
+                                    <div>{trabajo.fecha_entrega_real ? formatDate(trabajo.fecha_entrega_real) : '—'}</div>
                                 </div>
                             </div>
 
-                            {currentTrabajo.nota && (
+                            {trabajo.nota && (
                                 <div style={{ marginTop: 'var(--space-4)', padding: 'var(--space-3) var(--space-4)', background: 'var(--amber-50)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-sm)' }}>
-                                    <strong>Nota:</strong> {currentTrabajo.nota}
+                                    <strong>Nota:</strong> {trabajo.nota}
                                 </div>
                             )}
                         </div>
                     </div>
 
-                    {/* Abonos History */}
-                    <div className="card">
-                        <div className="card-header">
-                            <span className="card-title">Historial de Abonos ({currentAbonos.length})</span>
-                        </div>
-                        <div className="table-wrapper">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Fecha</th>
-                                        <th>Método</th>
-                                        <th className="text-right">Monto</th>
-                                        <th>Nota</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {currentAbonos.map(a => (
-                                        <tr key={a.id}>
-                                            <td className="text-muted">{formatDateTime(a.fecha)}</td>
-                                            <td><span className="badge badge-slate" style={{ textTransform: 'capitalize' }}>{a.metodo_pago}</span></td>
-                                            <td className="text-right font-mono font-bold" style={{ color: 'var(--color-success)' }}>
-                                                +RD$ {formatMoney(a.monto)}
-                                            </td>
-                                            <td className="text-muted">{a.nota || '—'}</td>
-                                        </tr>
-                                    ))}
-                                    {currentAbonos.length === 0 && (
-                                        <tr><td colSpan={4} className="text-center text-muted" style={{ padding: 'var(--space-8)' }}>No hay abonos registrados</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                    {/* Abonos History - Componentized */}
+                    <HistorialAbonos abonos={abonosList} />
                 </div>
 
-                {/* Right - Financial Summary */}
+                {/* Right - Financial Summary - Componentized */}
                 <div>
-                    <div className="card" style={{ position: 'sticky', top: 'calc(var(--topbar-height) + var(--space-6))' }}>
-                        <div className="card-header">
-                            <span className="card-title">Resumen Financiero</span>
-                        </div>
-                        <div className="card-body">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
-                                <span className="text-muted">Precio Total</span>
-                                <span className="font-mono">RD$ {formatMoney(currentTrabajo.precio_total)}</span>
-                            </div>
-                            {currentTrabajo.tiene_descuento && (
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-3)', color: 'var(--color-success)' }}>
-                                    <span>Descuento</span>
-                                    <span className="font-mono">- RD$ {formatMoney(currentTrabajo.monto_descuento)}</span>
-                                </div>
-                            )}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-3)' }}>
-                                <span className="text-muted">Total Abonado</span>
-                                <span className="font-mono" style={{ color: 'var(--color-success)' }}>RD$ {formatMoney(currentTrabajo.total_abonado)}</span>
-                            </div>
-                            <div style={{
-                                display: 'flex', justifyContent: 'space-between',
-                                padding: 'var(--space-4) 0', marginTop: 'var(--space-2)',
-                                borderTop: '2px solid var(--border-strong)',
-                                fontSize: 'var(--text-xl)', fontWeight: 700,
-                            }}>
-                                <span>Saldo</span>
-                                <span className="font-mono" style={{ color: currentTrabajo.saldo_pendiente > 0 ? 'var(--color-danger)' : 'var(--color-success)' }}>
-                                    RD$ {formatMoney(currentTrabajo.saldo_pendiente)}
-                                </span>
-                            </div>
-
-                            {/* Progress Bar */}
-                            <div style={{ marginTop: 'var(--space-4)' }}>
-                                <div className="text-small" style={{ marginBottom: 4 }}>Progreso de Pago</div>
-                                <div style={{ height: 8, background: 'var(--slate-100)', borderRadius: 4, overflow: 'hidden' }}>
-                                    <div style={{
-                                        height: '100%',
-                                        width: `${(currentTrabajo.precio_total - currentTrabajo.monto_descuento) > 0 ? Math.min(100, (currentTrabajo.total_abonado / (currentTrabajo.precio_total - currentTrabajo.monto_descuento)) * 100) : 0}%`,
-                                        background: currentTrabajo.saldo_pendiente <= 0 ? 'var(--color-success)' : 'var(--color-primary)',
-                                        borderRadius: 4,
-                                        transition: 'width var(--transition-slow)',
-                                    }} />
-                                </div>
-                                <div className="text-small" style={{ marginTop: 4, textAlign: 'right' }}>
-                                    {(currentTrabajo.precio_total - currentTrabajo.monto_descuento) > 0 ? Math.min(100, Math.round((currentTrabajo.total_abonado / (currentTrabajo.precio_total - currentTrabajo.monto_descuento)) * 100)) : 0}%
-                                </div>
-                            </div>
-
-                            {/* Botones de Factura */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginTop: 'var(--space-5)' }}>
-                                <button
-                                    className="btn btn-primary"
-                                    onClick={() => setModalPrint(true)}
-                                    style={{ width: '100%', justifyContent: 'center' }}
-                                >
-                                    <Printer size={16} /> Imprimir Factura
-                                </button>
-                                <button
-                                    className="btn btn-success"
-                                    onClick={handleWhatsApp}
-                                    style={{ width: '100%', justifyContent: 'center' }}
-                                >
-                                    <MessageCircle size={16} /> Enviar por WhatsApp
-                                </button>
-                            </div>
-                        </div>
+                    <ResumenFinanciero trabajo={trabajo} />
+                    
+                    {/* Botones de Factura */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginTop: 'var(--space-5)' }}>
+                        <button
+                            className="btn btn-primary"
+                            onClick={() => setModalPrint(true)}
+                            style={{ width: '100%', justifyContent: 'center' }}
+                        >
+                            <Printer size={16} /> Imprimir Factura
+                        </button>
+                        <button
+                            className="btn btn-success"
+                            onClick={handleWhatsApp}
+                            style={{ width: '100%', justifyContent: 'center' }}
+                        >
+                            <MessageCircle size={16} /> Enviar por WhatsApp
+                        </button>
                     </div>
                 </div>
             </div>
@@ -604,9 +508,8 @@ export default function TrabajoDetalle() {
                         )
                     }
                 >
-                    {/* Paso: idle — confirmar envío */}
                     {whatsAppStep === 'idle' && (
-                        <div>
+                        <div className="flex-col gap-md">
                             <div style={{
                                 display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
                                 padding: 'var(--space-4)', background: '#f0fdf4',
@@ -615,32 +518,42 @@ export default function TrabajoDetalle() {
                             }}>
                                 <MessageCircle size={32} style={{ color: '#16a34a', flexShrink: 0 }} />
                                 <div>
-                                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Enviar comprobante del Trabajo #{currentTrabajo.id}</div>
+                                    <div style={{ fontWeight: 600, marginBottom: 4 }}>Enviar mensaje al cliente</div>
                                     <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                                        Se abrirá WhatsApp con un mensaje pre-redactado para <strong>{cliente?.nombre || 'el cliente'}</strong>.
+                                        Seleccione la plantilla de mensaje para <strong>{cliente?.nombre || 'el cliente'}</strong>.
                                     </div>
                                 </div>
                             </div>
-                            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                                    <span>Cliente</span>
-                                    <strong>{cliente?.nombre || '—'}</strong>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                                    <span>Teléfono</span>
-                                    <strong>{cliente?.telefono || 'Sin teléfono'}</strong>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-                                    <span>Saldo</span>
-                                    <strong style={{ color: currentTrabajo.saldo_pendiente > 0 ? 'var(--color-danger)' : 'var(--color-success)' }}>
-                                        RD$ {formatMoney(currentTrabajo.saldo_pendiente)}
-                                    </strong>
-                                </div>
+                            
+                            <div className="form-group">
+                                <label className="form-label">Plantilla de Mensaje</label>
+                                <select 
+                                    className="form-select" 
+                                    value={selectedTemplate} 
+                                    onChange={e => setSelectedTemplate(e.target.value)}
+                                >
+                                    {Object.entries(WHATSAPP_TEMPLATES).map(([key, t]) => (
+                                        <option key={key} value={key}>{t.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div style={{ 
+                                padding: 'var(--space-4)', 
+                                background: 'var(--slate-50)', 
+                                border: '1px solid var(--border-default)', 
+                                borderRadius: 'var(--radius-md)',
+                                fontSize: 'var(--text-sm)',
+                                fontStyle: 'italic',
+                                color: 'var(--text-secondary)',
+                                whiteSpace: 'pre-wrap'
+                            }}>
+                                <strong>Vista previa:</strong><br />
+                                {WHATSAPP_TEMPLATES[selectedTemplate].message(trabajo, cliente)}
                             </div>
                         </div>
                     )}
 
-                    {/* Paso: sending */}
                     {whatsAppStep === 'sending' && (
                         <div style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
                             <div style={{ fontSize: 48, marginBottom: 'var(--space-4)' }}>📤</div>
@@ -649,7 +562,6 @@ export default function TrabajoDetalle() {
                         </div>
                     )}
 
-                    {/* Paso: sent — preguntar si guardar */}
                     {whatsAppStep === 'sent' && (
                         <div>
                             <div style={{
@@ -679,7 +591,6 @@ export default function TrabajoDetalle() {
                         </div>
                     )}
 
-                    {/* Paso: saving */}
                     {whatsAppStep === 'saving' && (
                         <div style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
                             <div style={{ fontSize: 48, marginBottom: 'var(--space-4)' }}>💾</div>
@@ -687,7 +598,6 @@ export default function TrabajoDetalle() {
                         </div>
                     )}
 
-                    {/* Paso: saved */}
                     {whatsAppStep === 'saved' && facturaGuardada && (
                         <div>
                             <div style={{
@@ -702,19 +612,19 @@ export default function TrabajoDetalle() {
                                     <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>Ya puede consultarla en el módulo de Facturación.</div>
                                 </div>
                             </div>
-                            <div style={{ fontSize: 'var(--text-sm)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                                    <span style={{ color: 'var(--text-secondary)' }}>Número de Factura</span>
-                                    <strong style={{ color: 'var(--color-primary)' }}>{facturaGuardada.numero_factura}</strong>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                                    <span style={{ color: 'var(--text-secondary)' }}>Cliente</span>
-                                    <strong>{cliente?.nombre || '—'}</strong>
-                                </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
-                                    <span style={{ color: 'var(--text-secondary)' }}>Total</span>
-                                    <strong style={{ color: 'var(--color-success)' }}>RD$ {formatMoney(facturaGuardada.total)}</strong>
-                                </div>
+                                <div style={{ fontSize: 'var(--text-sm)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                                        <span style={{ color: 'var(--text-secondary)' }}>Número de Factura</span>
+                                        <strong style={{ color: 'var(--color-primary)' }}>{facturaGuardada.numero_factura}</strong>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                                        <span style={{ color: 'var(--text-secondary)' }}>Cliente</span>
+                                        <strong>{cliente?.nombre || '—'}</strong>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0' }}>
+                                        <span style={{ color: 'var(--text-secondary)' }}>Total</span>
+                                        <strong style={{ color: 'var(--color-success)' }}>RD$ {facturaGuardada.total}</strong>
+                                    </div>
                             </div>
                         </div>
                     )}
@@ -730,7 +640,7 @@ export default function TrabajoDetalle() {
                 >
                     <div className="alert alert-warning" style={{ marginBottom: 'var(--space-4)' }}>
                         <DollarSign size={16} />
-                        Saldo pendiente: <strong>RD$ {formatMoney(currentTrabajo.saldo_pendiente)}</strong>
+                        Saldo pendiente: <strong>RD$ {trabajo.saldo_pendiente}</strong>
                     </div>
                     <div className="form-group">
                         <label className="form-label">Monto del Abono (RD$) *</label>
@@ -739,7 +649,7 @@ export default function TrabajoDetalle() {
                             value={abonoForm.monto}
                             onChange={e => setAbonoForm({ ...abonoForm, monto: e.target.value })}
                             placeholder="0.00"
-                            max={currentTrabajo.saldo_pendiente}
+                            max={trabajo.saldo_pendiente}
                             autoFocus
                         />
                     </div>

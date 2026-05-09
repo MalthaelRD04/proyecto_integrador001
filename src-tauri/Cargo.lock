@@ -1965,7 +1965,7 @@ dependencies = [
 
 [[package]]
 name = "jrj-sistema"
-version = "1.0.3"
+version = "1.0.6"
 dependencies = [
  "log",
  "serde",

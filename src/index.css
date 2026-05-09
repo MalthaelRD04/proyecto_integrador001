@@ -75,6 +75,10 @@
   --text-inverse: #ffffff;
   --text-sidebar: #a4c3dc;
   --text-sidebar-active: #ffffff;
+  --text-success: var(--color-success);
+  --text-danger: var(--color-danger);
+  --text-warning: var(--color-warning);
+
 
   /* ── Borders ── */
   --border-default: rgba(44, 82, 120, 0.1);

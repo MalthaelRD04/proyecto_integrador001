@@ -1,69 +1,66 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getDashboardStats, formatMoney, getAll, getById } from '../data/store';
-import { DollarSign, Briefcase, AlertTriangle, TrendingUp, Package, ArrowRight } from 'lucide-react';
+import { DollarSign, Briefcase, AlertTriangle, TrendingUp, ArrowRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { formatMoney } from '../data/store';
+
+// Custom Hooks & Components
+import { useDashboard } from '../hooks/useDashboard';
+import StatCard from '../components/dashboard/StatCard';
+import LowStockList from '../components/dashboard/LowStockList';
+import ActiveJobsList from '../components/dashboard/ActiveJobsList';
 
 export default function Dashboard() {
-    const [stats, setStats] = useState(null);
-    const [clientesMap, setClientesMap] = useState({});
+    const { stats, clientesMap, loading, triggerRefresh } = useDashboard();
+    const [lastRefresh, setLastRefresh] = useState(new Date());
 
-    useEffect(() => {
-        async function load() {
-            const s = await getDashboardStats();
-            setStats(s);
-            if (s.ultimosTrabajos && s.ultimosTrabajos.length > 0) {
-                const map = {};
-                for (const t of s.ultimosTrabajos) {
-                    if (t.cliente_id && !map[t.cliente_id]) {
-                        const c = await getById('clientes', t.cliente_id);
-                        map[t.cliente_id] = c;
-                    }
-                }
-                setClientesMap(map);
-            }
-        }
-        load();
-    }, []);
-
+    if (loading) return <div style={{ padding: 'var(--space-8)' }}>Cargando Dashboard...</div>;
     if (!stats) return null;
 
+    const handleRefresh = () => {
+        triggerRefresh();
+        setLastRefresh(new Date());
+    };
+
     return (
-        <div>
+        <div className="flex-col gap-md">
+            <div className="flex-between mb-space-4">
+                <div>
+                    <h1 className="text-xl font-bold">Panel de Control</h1>
+                    <p className="text-muted text-sm">Resumen general de la operación de JRJ</p>
+                </div>
+                <button className="btn btn-secondary btn-sm" onClick={handleRefresh}>
+                    Actualizar Datos
+                </button>
+            </div>
+
             {/* Stat Cards */}
             <div className="stat-grid">
-                <div className="stat-card">
-                    <div className="stat-icon blue"><DollarSign size={22} /></div>
-                    <div className="stat-info">
-                        <div className="stat-label">Ventas del Día</div>
-                        <div className="stat-value">RD$ {formatMoney(stats.ventasHoy)}</div>
-                    </div>
-                </div>
-
-                <div className="stat-card">
-                    <div className="stat-icon orange"><Briefcase size={22} /></div>
-                    <div className="stat-info">
-                        <div className="stat-label">Trabajos Pendientes</div>
-                        <div className="stat-value">{stats.trabajosPendientes}</div>
-                    </div>
-                </div>
-
-                <div className="stat-card">
-                    <div className="stat-icon red"><AlertTriangle size={22} /></div>
-                    <div className="stat-info">
-                        <div className="stat-label">Bajo Stock</div>
-                        <div className="stat-value">{stats.productosBajoStock.length}</div>
-                        <div className="stat-sub">productos por debajo del mínimo</div>
-                    </div>
-                </div>
-
-                <div className="stat-card">
-                    <div className="stat-icon green"><TrendingUp size={22} /></div>
-                    <div className="stat-info">
-                        <div className="stat-label">Ingresos del Mes</div>
-                        <div className="stat-value">RD$ {formatMoney(stats.ingresosMensuales)}</div>
-                    </div>
-                </div>
+                <StatCard 
+                    label="Ventas del Día" 
+                    value={`RD$ ${formatMoney(stats.ventasHoy)}`} 
+                    icon={DollarSign} 
+                    colorClass="blue" 
+                />
+                <StatCard 
+                    label="Trabajos Pendientes" 
+                    value={stats.trabajosPendientes} 
+                    icon={Briefcase} 
+                    colorClass="orange" 
+                />
+                <StatCard 
+                    label="Bajo Stock" 
+                    value={stats.productosBajoStock.length} 
+                    subtext="productos críticos"
+                    icon={AlertTriangle} 
+                    colorClass="red" 
+                />
+                <StatCard 
+                    label="Ingresos del Mes" 
+                    value={`RD$ ${formatMoney(stats.ingresosMensuales)}`} 
+                    icon={TrendingUp} 
+                    colorClass="green" 
+                />
             </div>
 
             <div className="dashboard-2col">
@@ -87,13 +84,13 @@ export default function Dashboard() {
                                         boxShadow: '0 4px 6px rgba(0,0,0,0.06)',
                                     }}
                                 />
-                                <Bar dataKey="total" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="total" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Productos bajo stock */}
+                {/* Low Stock List - Componentized */}
                 <div className="card">
                     <div className="card-header">
                         <span className="card-title">Productos con Bajo Stock</span>
@@ -102,42 +99,12 @@ export default function Dashboard() {
                         </Link>
                     </div>
                     <div className="card-body" style={{ padding: 0 }}>
-                        {stats.productosBajoStock.length === 0 ? (
-                            <div className="empty-state" style={{ padding: 'var(--space-8)' }}>
-                                <Package size={32} />
-                                <p>Todos los productos tienen stock suficiente</p>
-                            </div>
-                        ) : (
-                            <div className="table-wrapper">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Producto</th>
-                                            <th className="text-right">Stock</th>
-                                            <th className="text-right">Mínimo</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {stats.productosBajoStock.map(p => (
-                                            <tr key={p.id}>
-                                                <td>{p.nombre}</td>
-                                                <td className="text-right">
-                                                    <span className={`badge ${p.stock === 0 ? 'badge-red' : 'badge-orange'}`}>
-                                                        {p.stock}
-                                                    </span>
-                                                </td>
-                                                <td className="text-right text-muted">{p.stock_minimo}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
+                        <LowStockList products={stats.productosBajoStock} />
                     </div>
                 </div>
             </div>
 
-            {/* Últimos trabajos */}
+            {/* Active Jobs List - Componentized */}
             <div className="card" style={{ marginTop: 'var(--space-4)' }}>
                 <div className="card-header">
                     <span className="card-title">Trabajos Activos</span>
@@ -146,51 +113,12 @@ export default function Dashboard() {
                     </Link>
                 </div>
                 <div className="card-body" style={{ padding: 0 }}>
-                    {stats.ultimosTrabajos.length === 0 ? (
-                        <div className="empty-state" style={{ padding: 'var(--space-8)' }}>
-                            <Briefcase size={32} />
-                            <p>No hay trabajos activos</p>
-                        </div>
-                    ) : (
-                        <div className="table-wrapper">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Cliente</th>
-                                        <th>Descripción</th>
-                                        <th>Estado</th>
-                                        <th className="text-right">Saldo</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {stats.ultimosTrabajos.map(t => {
-                                        const cliente = clientesMap[t.cliente_id];
-                                        return (
-                                            <tr key={t.id}>
-                                                <td className="font-bold">{cliente?.nombre || '—'}</td>
-                                                <td style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                    {t.descripcion}
-                                                </td>
-                                                <td>
-                                                    <span className={`badge ${t.estado === 'pendiente' ? 'badge-amber' : t.estado === 'en_proceso' ? 'badge-blue' : 'badge-green'}`}>
-                                                        {t.estado === 'en_proceso' ? 'En Proceso' : t.estado.charAt(0).toUpperCase() + t.estado.slice(1)}
-                                                    </span>
-                                                </td>
-                                                <td className="text-right font-mono">RD$ {formatMoney(t.saldo_pendiente)}</td>
-                                                <td>
-                                                    <Link to={`/trabajos/${t.id}`} className="btn btn-sm btn-ghost">
-                                                        <ArrowRight size={14} />
-                                                    </Link>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
+                    <ActiveJobsList jobs={stats.ultimosTrabajos} clientsMap={clientesMap} />
                 </div>
+            </div>
+            
+            <div className="text-center text-muted" style={{ fontSize: '10px', marginTop: 'var(--space-8)' }}>
+                Última actualización: {lastRefresh.toLocaleTimeString()}
             </div>
         </div>
     );

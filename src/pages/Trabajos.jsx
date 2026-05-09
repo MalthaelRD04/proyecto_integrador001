@@ -116,19 +116,44 @@ export default function Trabajos() {
 
     return (
         <div>
-            <div className="toolbar">
-                <div className="toolbar-left">
-                    <div className="search-input-wrapper">
+            <div className="toolbar flex-between">
+                <div className="flex-col gap-md" style={{ flex: 1 }}>
+                    <div className="search-input-wrapper" style={{ maxWidth: 400 }}>
                         <Search size={16} />
-                        <input type="text" className="form-input" placeholder="Buscar trabajos..." value={search} onChange={e => setSearch(e.target.value)} />
+                        <input type="text" className="form-input" placeholder="Buscar por cliente, descripción..." value={search} onChange={e => setSearch(e.target.value)} />
                     </div>
-                    <select className="form-select" style={{ width: 160 }} value={filterEstado} onChange={e => setFilterEstado(e.target.value)}>
-                        <option value="all">Todos los estados</option>
-                        <option value="pendiente">Pendiente</option>
-                        <option value="en_proceso">En Proceso</option>
-                        <option value="entregado">Entregado</option>
-                        <option value="cancelado">Cancelado</option>
-                    </select>
+                    <div className="flex gap-2" style={{ display: 'flex', flexWrap: 'wrap' }}>
+                        <button 
+                            className={`btn btn-sm ${filterEstado === 'all' ? 'btn-primary' : 'btn-ghost'}`} 
+                            onClick={() => setFilterEstado('all')}
+                        >
+                            Todos
+                        </button>
+                        <button 
+                            className={`btn btn-sm ${filterEstado === 'pendiente' ? 'btn-primary' : 'btn-ghost'}`} 
+                            onClick={() => setFilterEstado('pendiente')}
+                        >
+                            Pendientes
+                        </button>
+                        <button 
+                            className={`btn btn-sm ${filterEstado === 'en_proceso' ? 'btn-primary' : 'btn-ghost'}`} 
+                            onClick={() => setFilterEstado('en_proceso')}
+                        >
+                            En Proceso
+                        </button>
+                        <button 
+                            className={`btn btn-sm ${filterEstado === 'entregado' ? 'btn-primary' : 'btn-ghost'}`} 
+                            onClick={() => setFilterEstado('entregado')}
+                        >
+                            Entregados
+                        </button>
+                        <button 
+                            className={`btn btn-sm ${filterEstado === 'cancelado' ? 'btn-primary' : 'btn-ghost'}`} 
+                            onClick={() => setFilterEstado('cancelado')}
+                        >
+                            Cancelados
+                        </button>
+                    </div>
                 </div>
                 <button className="btn btn-primary" onClick={openCreate}>
                     <Plus size={16} /> Nuevo Trabajo
