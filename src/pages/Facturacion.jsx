@@ -102,6 +102,7 @@ export default function Facturacion() {
             return;
         }
 
+        try {
         const factura = await crearFactura(
             {
                 cliente_id: clienteId ? Number(clienteId) : null,
@@ -131,6 +132,10 @@ export default function Facturacion() {
 
         // Redirect immediately and pass the autoPrint flag
         navigate(`/facturas/${factura.id}`, { state: { autoPrint: true } });
+        } catch (e) {
+            setError(e.message || 'No se pudo guardar la factura. No se realizaron cambios.');
+            setTimeout(() => setError(''), 5000);
+        }
     };
 
     return (

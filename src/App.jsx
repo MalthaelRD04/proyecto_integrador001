@@ -24,6 +24,11 @@ function ProtectedRoute() {
     return <Outlet />;
 }
 
+function AdminRoute({ children }) {
+    const { user } = useAuth();
+    return user?.rol === 'admin' ? children : <Navigate to="/" replace />;
+}
+
 function AppLayout({ title, children }) {
     return (
         <div className="app-layout">
@@ -54,7 +59,7 @@ function AppRoutes() {
         <Routes>
             <Route path="/login" element={<Navigate to="/" replace />} />
             <Route path="/" element={<AppLayout title="Dashboard"><Dashboard /></AppLayout>} />
-            <Route path="/usuarios" element={<AppLayout title="Usuarios"><Usuarios /></AppLayout>} />
+            <Route path="/usuarios" element={<AdminRoute><AppLayout title="Usuarios"><Usuarios /></AppLayout></AdminRoute>} />
             <Route path="/clientes" element={<AppLayout title="Clientes"><Clientes /></AppLayout>} />
             <Route path="/categorias" element={<AppLayout title="Categorías"><Categorias /></AppLayout>} />
             <Route path="/items" element={<AppLayout title="Productos y Servicios"><Items /></AppLayout>} />
@@ -64,7 +69,7 @@ function AppRoutes() {
             <Route path="/trabajos" element={<AppLayout title="Trabajos"><Trabajos /></AppLayout>} />
             <Route path="/trabajos/:id" element={<AppLayout title="Detalle de Trabajo"><TrabajoDetalle /></AppLayout>} />
             <Route path="/reportes" element={<AppLayout title="Reportes"><Reportes /></AppLayout>} />
-            <Route path="/usuarios/:id/perfil" element={<AppLayout title="Configuración de Usuario"><PerfilUsuario /></AppLayout>} />
+            <Route path="/usuarios/:id/perfil" element={<AdminRoute><AppLayout title="Configuración de Usuario"><PerfilUsuario /></AppLayout></AdminRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );

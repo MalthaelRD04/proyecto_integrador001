@@ -107,7 +107,7 @@ export default function Sidebar() {
                     {navItems.map(section => (
                         <div key={section.label}>
                             <div className="sidebar-section-title">{section.label}</div>
-                            {section.items.map(item => (
+                            {section.items.filter(item => item.to !== '/usuarios' || user?.rol === 'admin').map(item => (
                                 <NavLink
                                     key={item.to}
                                     to={item.to}

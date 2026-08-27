@@ -125,6 +125,14 @@ Tras abrirse sin detectar un archivo `jrj_sistema.db` preexistente, el sistema l
 
 ## 📝 Notas Técnicas / Cambios Recientes
 
+### Actualizaciones sin pérdida de datos
+
+- La base se conserva en `jrj_sistema.db`, dentro del directorio de datos de la aplicación asociado a `com.jrj.sistema`.
+- **No cambies** el `identifier` de `src-tauri/tauri.conf.json` ni el nombre usado en `DATABASE_URL`: hacerlo crea otra ubicación y la aplicación parecerá vacía.
+- Las migraciones usan una versión de esquema y una transacción: si una actualización falla, se revierte completa y los registros anteriores permanecen intactos.
+- Los datos de demostración solo se insertan en una base realmente nueva; nunca durante una actualización.
+- Instala las versiones nuevas encima de la anterior. No uses programas de limpieza que eliminen los datos de la aplicación.
+
 - **Migración a Tauri Integrada**: La aplicación ha superado la dependencia a ElectronJS (que creaba instaladores inflados con alto costo en memoria RAM) para implementarse de forma exitosa sobre ecosistemas modernos de **Rust via Tauri**, abriendo paso a descargas mucho más rápidas y eficiencia energética.
 - **Datos Relacionales Confiables (SQLite)**: Dejando atrás la simulación de tablas relacionales desde `IndexedDB/LocalStorage`, se incorpora y persiste de forma nativa base de datos estandarizadas `.db` mediante el plugin `@tauri-apps/plugin-sql`.
 - **Integridad del OS**: Llamados estáticos y dinámicos para lanzar URLs de envío de recibos mediante WhatsApp (vía el plugin de OS nativo) o inyecciones con iFrames para eludir bloqueadores en diálogos de Impresión.

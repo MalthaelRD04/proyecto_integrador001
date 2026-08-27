@@ -4,15 +4,24 @@
 // =============================================
 
 import Database from '@tauri-apps/plugin-sql';
+import { hashPassword, isPasswordHash, verifyPassword } from '../utils/password';
 
 let db = null;
 let _dbReady = false;
+const DATABASE_URL = 'sqlite:jrj_sistema.db';
+const SCHEMA_VERSION = 2;
+const ENTITIES = new Set(['usuarios', 'categorias', 'items', 'clientes', 'facturas', 'detalle_factura', 'trabajos', 'abonos_trabajo']);
 
 // ── Inicialización ──
 
 export async function initDatabase() {
-    // Abre (o crea) la base de datos SQLite nativa
-    db = await Database.load('sqlite:jrj_sistema.db');
+    // DATABASE_URL y el identifier de Tauri deben permanecer estables entre
+    // versiones para que las actualizaciones abran la misma base en AppData.
+    db = await Database.load(DATABASE_URL);
+    const existingTables = await db.select("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'");
+    const isBrandNewDatabase = existingTables.length === 0;
+    await db.execute('PRAGMA foreign_keys = ON');
+    await db.execute('PRAGMA journal_mode = WAL');
 
     // Crear tablas si no existen
     await createTables();
@@ -20,10 +29,13 @@ export async function initDatabase() {
     // Migrar si es necesario
     await migrateDB();
 
-    // Si no hay datos, hacer seed
+    // Los datos de demostración se crean solo en la primera instalación. Una
+    // actualización nunca debe rellenar ni sobrescribir una base existente.
     const result = await db.select("SELECT COUNT(*) as count FROM usuarios");
-    if (result[0].count === 0) {
+    if (isBrandNewDatabase) {
         await seedData();
+    } else if (Number(result[0]?.count || 0) === 0) {
+        throw new Error('La base existente no contiene usuarios. Restaure un respaldo; no se sobrescribieron datos.');
     }
 
     _dbReady = true;
@@ -37,6 +49,12 @@ export function isDBReady() {
 // ── Crear Tablas ──
 
 async function createTables() {
+    await db.execute(`
+        CREATE TABLE IF NOT EXISTS _app_meta (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+    `);
     await db.execute(`
         CREATE TABLE IF NOT EXISTS usuarios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -166,7 +184,10 @@ async function createTables() {
 // ── Migración ──
 
 async function migrateDB() {
-    try {
+    await withTransaction(async () => {
+        const versionRows = await db.select("SELECT value FROM _app_meta WHERE key = 'schema_version'");
+        const currentVersion = Number(versionRows[0]?.value || 0);
+        if (currentVersion > SCHEMA_VERSION) throw new Error(`Esquema de base no compatible: ${currentVersion}.`);
         const cols = await db.select("PRAGMA table_info(usuarios)");
         const colNames = cols.map(row => row.name);
         if (!colNames.includes('foto')) await db.execute("ALTER TABLE usuarios ADD COLUMN foto TEXT DEFAULT ''");
@@ -174,9 +195,11 @@ async function migrateDB() {
         if (!colNames.includes('correo')) await db.execute("ALTER TABLE usuarios ADD COLUMN correo TEXT DEFAULT ''");
         if (!colNames.includes('direccion')) await db.execute("ALTER TABLE usuarios ADD COLUMN direccion TEXT DEFAULT ''");
         if (!colNames.includes('bio')) await db.execute("ALTER TABLE usuarios ADD COLUMN bio TEXT DEFAULT ''");
-    } catch (e) {
-        console.warn('Error en migración:', e);
-    }
+        await db.execute(
+            "INSERT INTO _app_meta (key, value) VALUES ('schema_version', $1) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            [String(SCHEMA_VERSION)],
+        );
+    });
 }
 
 // ── Seed Data ──
@@ -271,19 +294,41 @@ function today() {
     return new Date().toISOString().split('T')[0];
 }
 
+async function withTransaction(operation) {
+    await db.execute('BEGIN IMMEDIATE');
+    try {
+        const result = await operation();
+        await db.execute('COMMIT');
+        return result;
+    } catch (error) {
+        try { await db.execute('ROLLBACK'); } catch { /* preservar error original */ }
+        throw error;
+    }
+}
+
+function assertEntity(entity) {
+    if (!ENTITIES.has(entity)) throw new Error(`Entidad no permitida: ${entity}`);
+}
+
 // ── Generic CRUD (todos async) ──
 
 export async function getAll(entity) {
+    assertEntity(entity);
     const rows = await db.select(`SELECT * FROM ${entity}`);
     return rows.map(normalizeBooleans);
 }
 
 export async function getById(entity, id) {
+    assertEntity(entity);
     const rows = await db.select(`SELECT * FROM ${entity} WHERE id = $1`, [Number(id)]);
     return rows.length > 0 ? normalizeBooleans(rows[0]) : null;
 }
 
 export async function create(entity, data) {
+    assertEntity(entity);
+    if (entity === 'usuarios' && data.contrasena_hash && !isPasswordHash(data.contrasena_hash)) {
+        data = { ...data, contrasena_hash: await hashPassword(data.contrasena_hash) };
+    }
     const keys = Object.keys(data);
     const values = Object.values(data);
     const placeholders = keys.map((_, i) => `$${i + 1}`).join(', ');
@@ -292,6 +337,10 @@ export async function create(entity, data) {
 }
 
 export async function update(entity, id, data) {
+    assertEntity(entity);
+    if (entity === 'usuarios' && data.contrasena_hash && !isPasswordHash(data.contrasena_hash)) {
+        data = { ...data, contrasena_hash: await hashPassword(data.contrasena_hash) };
+    }
     const keys = Object.keys(data);
     const values = Object.values(data);
     const setClause = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
@@ -300,16 +349,23 @@ export async function update(entity, id, data) {
 }
 
 export async function remove(entity, id) {
+    assertEntity(entity);
     await db.execute(`DELETE FROM ${entity} WHERE id = $1`, [Number(id)]);
 }
 
 // ── Auth ──
 
 export async function authenticate(usuario, password) {
-    const rows = await db.select(`SELECT * FROM usuarios WHERE usuario = $1 AND contrasena_hash = $2`, [usuario, password]);
+    const rows = await db.select(`SELECT * FROM usuarios WHERE usuario = $1`, [usuario]);
     if (rows.length === 0) return { success: false, error: 'Usuario o contraseña incorrectos' };
     const user = normalizeBooleans(rows[0]);
+    if (!(await verifyPassword(password, user.contrasena_hash))) {
+        return { success: false, error: 'Usuario o contraseña incorrectos' };
+    }
     if (!user.activo) return { success: false, error: 'Usuario desactivado. Contacte al administrador.' };
+    if (!isPasswordHash(user.contrasena_hash)) {
+        await db.execute('UPDATE usuarios SET contrasena_hash = $1 WHERE id = $2', [await hashPassword(password), user.id]);
+    }
     return { success: true, user: { id: user.id, nombre: user.nombre, usuario: user.usuario, rol: user.rol } };
 }
 
@@ -337,6 +393,8 @@ export async function getNextFacturaNum() {
 }
 
 export async function crearFactura(facturaData, detalles) {
+    if (!Array.isArray(detalles) || detalles.length === 0) throw new Error('La factura debe contener al menos un detalle.');
+    return withTransaction(async () => {
     const counterRows = await db.select(`SELECT value FROM _counters WHERE key = 'factura_num'`);
     const num = counterRows.length > 0 ? counterRows[0].value : 1;
     const numero_factura = `PCI-${num}`;
@@ -361,13 +419,20 @@ export async function crearFactura(facturaData, detalles) {
 
         // Descontar stock si es producto
         const itemRows = await db.select(`SELECT * FROM items WHERE id = $1`, [det.item_id]);
-        if (itemRows.length > 0 && itemRows[0].es_producto) {
-            const newStock = Math.max(0, itemRows[0].stock - det.cantidad);
+        if (itemRows.length === 0) throw new Error(`El producto o servicio ${det.item_id} ya no existe.`);
+        if (itemRows[0].es_producto) {
+            const quantity = Number(det.cantidad);
+            if (!Number.isFinite(quantity) || quantity <= 0) throw new Error('La cantidad debe ser mayor que cero.');
+            if (Number(itemRows[0].stock) < quantity) {
+                throw new Error(`Stock insuficiente para "${itemRows[0].nombre}". Disponible: ${itemRows[0].stock}.`);
+            }
+            const newStock = Number(itemRows[0].stock) - quantity;
             await db.execute(`UPDATE items SET stock = $1, actualizado_en = $2 WHERE id = $3`, [newStock, now(), det.item_id]);
         }
     }
 
     return await getById('facturas', facturaId);
+    });
 }
 
 // ── Trabajos ──
@@ -385,6 +450,7 @@ export async function crearTrabajo(data) {
 }
 
 export async function registrarAbono(trabajo_id, monto, metodo_pago, nota) {
+    return withTransaction(async () => {
     const trabajo = await getById('trabajos', trabajo_id);
     if (!trabajo) return { error: 'Trabajo no encontrado' };
 
@@ -420,6 +486,7 @@ export async function registrarAbono(trabajo_id, monto, metodo_pago, nota) {
     const abono = await getById('abonos_trabajo', abonoId);
     const trabajoActualizado = await getById('trabajos', trabajo_id);
     return { success: true, abono, trabajo: trabajoActualizado };
+    });
 }
 
 // ── Guardar Trabajo como Factura ──
